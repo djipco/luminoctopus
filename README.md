@@ -1,4 +1,4 @@
-# OctoWS2811Controller
+# Luminoctopus
 
 ## Introduction
 
