@@ -77,7 +77,7 @@ Available commands are:
 #### Configure Device
 
 This is a system-specific command. Only the system with the specified system ID will listen to it.
-The payload for this message is: 
+The payload (specific to Luminoctopus) for this message is: 
 
 |START MARKER|COMMAND|LENGTH       |SYSTEM ID    |COLOR ORDER|SPEED      |CHECKSUM|
 |------------|-------|-------------|-------------|-----------|-----------|--------|
