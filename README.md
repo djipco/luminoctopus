@@ -2,16 +2,13 @@
 
 ## Introduction
 
-This project allows the control of an 
-[OctoWS2811](https://github.com/PaulStoffregen/OctoWS2811)-enabled Teensy 4.1+ board using commands 
-sent over a USB-hosted serial connection. The OctoWS2811 is an 8-channel LED controller that makes 
-it easy to control WS2811 / WS2812 / WS2812B / WS2813 LED arrays or strips (RGB or RGBW).
+This repository hosts the Luminoctopus firmware as well as libraries to use the device from various
+software environments (e.g. TouchDesigner). The Luminoctopus is an 8-channel LED controller that can
+be controlled over USB. It makes it easy to pilot RGB or RGBW LED arrays, strips or matrices (WS2811
+/ WS2812 / WS2812B / WS2813 LED arrays or strips.
 
-For performance reasons, the communication protocol is binary. To use it easily without having to 
-dig into the details, you can download the user-friendly library for you platform. Current 
-implementations are:
-
-  * TouchDesigner component: [OctoWS2811Controller.tox](https://github.com/djipco/OctoWS2811Controller/raw/refs/heads/main/OctoWS2811Controller.tox)
+At its core, it uses an [OctoWS2811](https://www.pjrc.com/store/octo28_adaptor.html)-enabled 
+[Teensy 4.1](https://www.pjrc.com/store/teensy41.html) board. 
 
 ## How many LEDs can be controlled?
 
@@ -35,22 +32,21 @@ anyway.
 
 ## How can I use it?
 
-Use [Arduino IDE](https://www.arduino.cc/en/software/) to upload `OctoWS2811Controller.ino` to your
-Teensy 4.x device. The code has only tested been with Teensy 4.1 (but I believe it should work with 
-the 4.0).
+As of now, the only library available is for the TouchDesigner environment. You can find the 
+`Luminoctopus.tox` file in `libraries/touchdesigner/`. To use it, simply drag and drop the `.tox` 
+file to your project and enter the appropriate settings.
 
-Note that you will have to install the Teensy board in the Arduino IDE. To do so, follow these 
-[instructions](https://www.pjrc.com/teensy/td_download.html). 
+To install the firmware on the Luminoctopus device (if not already present), use the 
+[Arduino IDE](https://www.arduino.cc/en/software/) to upload `Luminoctopus.ino` to the Teensy 4.1
+device. Note that you will have to install the Teensy board in the Arduino IDE. To do so, follow 
+these [instructions](https://www.pjrc.com/teensy/td_download.html). 
 
-In TouchDesigner, simply drag and drop the `.tox` file to your project and enter the appropriate 
-settings.
+## Luminoctopus Outputs
 
-## OctoWS2811 Outputs
+The layout for the two RJ-45 output ports on the Luminoctopus are as follows (for details, check 
+out the documentation for the [OctoWS2811 adapter](https://www.pjrc.com/store/octo28_adaptor.html)):
 
-The layout for the two RJ-45 output ports on the 
-[OctoWS2811 adapter](https://www.pjrc.com/store/octo28_adaptor.html) are as follows:
-
-|Port 1 (top jack) | Port 2 (bottom jack) |
+|Port A (top)      | Port B (bottom)      |
 |------------------|----------------------|
 | 0. Orange        | 4. Orange            |
 | 1. Blue          | 5. Blue              |
@@ -58,12 +54,13 @@ The layout for the two RJ-45 output ports on the
 | 3. Brown         | 7. Brown             |
 
 Note that, within each twisted pair, the full-color wire is for data and the color+white wire is for 
-ground. 
+ground (GND). 
 
 ## Protocol
 
-If you just want to use the library, you do not need to read beyond this point. However, if you want
-to use the protocol directly, you will find some info below.
+> [!NOTE]  
+> If you just want to use the device and library, you do not need to read anything beyond this point.
+> However, if you want to use or understand the protocol itself, you will find some info below.
 
 #### General Messsage Format
 
@@ -73,20 +70,20 @@ to use the protocol directly, you will find some info below.
 
 Available commands are:
 
-* Configure Device (0x10)
-* Assign Colors (0x20)
-* Fill Color (0x21)
+* Configure Device (`0x10`)
+* Assign Colors (`0x20`)
+* Fill Color (`0x21`)
 
 #### Configure Device
 
 This is a system-specific command. Only the system with the specified system ID will listen to it.
 The payload for this message is: 
 
-|START MARKER|COMMAND|LENGTH    |SYSTEM ID|COLOR ORDER|SPEED      |CHECKSUM|
-|------------|-------|----------|---------|-----------|-----------|--------|
-|0x00        |0x10   |0x00 0x02 |0x00 0x01| see below | see below | modulo |
+|START MARKER|COMMAND|LENGTH       |SYSTEM ID    |COLOR ORDER|SPEED      |CHECKSUM|
+|------------|-------|-------------|-------------|-----------|-----------|--------|
+|`0x00`      |`0x10` |`0x00` `0x02`|`0x00` `0x01`| see below | see below | modulo |
 
-System ID 0x00 0x01 is for the OctoWS2811 + Teensy controller.
+System ID `0x00` `0x01` is for the Luminoctopus. Perhaps others will be added.
 
 Available color orders are:
 
@@ -121,7 +118,6 @@ Available color orders are:
   * WS2811_BRWG = 28 (0x1C)
   * WS2811_BGWR = 29 (0x1D)
 
-
 Available speeds are: 
 
   * WS2811_800kHz =  0 (0x00)
@@ -137,7 +133,7 @@ use 4-component colors (RGBW), you can send 4 bytes per color. Otherwise, it def
 
 |START MARKER|COMMAND|LENGTH    |      PAYLOAD           |CHECKSUM|
 |------------|-------|----------|------------------------|--------|
-|0x00         |0x20   | variable |CH + RGB... or RGBW...  | modulo |
+|`0x00`      |`0x20` | variable |CH + RGB... or RGBW...  | modulo |
 
 #### Fill Color
 
@@ -145,7 +141,7 @@ This assigns the same color to all the LEDs on a channel (or all channels if 255
 
 |START MARKER|COMMAND|LENGTH    |      PAYLOAD         |CHECKSUM|
 |------------|-------|----------|----------------------|--------|
-|0x00        |0x20   | variable |CH + RGB or CH + RGBW | modulo |
+|`0x00`      |`0x20` | variable |CH + RGB or CH + RGBW | modulo |
 
 This can be used to turn off the lights by sending a color of (0, 0, 0).
 
