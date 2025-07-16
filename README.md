@@ -5,7 +5,7 @@
 This repository hosts the Luminoctopus firmware as well as libraries to use the device from various
 software environments (e.g. TouchDesigner). The Luminoctopus is an 8-channel LED controller that can
 be controlled over USB. It makes it easy to pilot RGB or RGBW LED arrays, strips or matrices (WS2811
-/ WS2812 / WS2812B / WS2813 LED arrays or strips.
+/ WS2812 / WS2812B / WS2813).
 
 At its core, it uses an [OctoWS2811](https://www.pjrc.com/store/octo28_adaptor.html)-enabled 
 [Teensy 4.1](https://www.pjrc.com/store/teensy41.html) board. 
