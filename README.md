@@ -19,7 +19,7 @@ total). These threshold apply to 800kHz LEDs. If you use 400kHz LEDs, you will g
 
 It's always a tradeoff between frame rate, type of LED (RGB vs. RGBW), protocol speed, and number of
 LEDs. If you use the TouchDesigner component, the maximum number of LEDs given the current 
-parameters is shown on the OctoWS2811 parameter page.
+parameters is shown on the component's parameter page.
 
 Note that there is a hard maximum of 1365 RGB LEDs and 1023 RGBW LEDs per channel (no matter the 
 frame rate). This is due to limits imposed by the size of a single DMA transfer (32kbits).
