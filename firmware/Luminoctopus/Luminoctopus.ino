@@ -40,11 +40,11 @@ constexpr uint8_t  SOF_MARKER                =   0x00; // Start of frame marker
 constexpr uint16_t SYSTEM_ID                 = 0x0001; // Luminoctopus system ID (0x00 0x01)
 
 // Command identifier constants
-constexpr uint8_t  CMD_CONFIGURE             =   0x10;  // Configure system
-constexpr uint8_t  CMD_ASSIGN_COLORS         =   0x20;  // Assign colors
-constexpr uint8_t  CMD_FILL_COLOR            =   0x21;  // Fill color
-constexpr uint8_t  CMD_UPDATE                =   0x30;  // Update display
-constexpr uint8_t  CMD_SYSTEM_EXCLUSIVE      =   0xFF;  // Command meant for a specific system only
+constexpr uint8_t  CMD_CONFIGURE             =   0x01;  // Configure system
+constexpr uint8_t  CMD_SYSTEM_EXCLUSIVE      =   0x0A;  // Command meant for a specific system only
+constexpr uint8_t  CMD_ASSIGN_COLORS         =   0x10;  // Assign colors
+constexpr uint8_t  CMD_FILL_COLOR            =   0x11;  // Fill color
+constexpr uint8_t  CMD_UPDATE                =   0x20;  // Update display
 
 // Map of allowed color orders using OctoWS2811's constants 
 const int colorOrderMap[] = {
@@ -556,8 +556,6 @@ void handleFillColorCommand() {
       }
     }
   }
-
-  frameReady = true;
 
 }
 
