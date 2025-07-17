@@ -5,7 +5,7 @@
 This repository hosts the Luminoctopus firmware as well as libraries to use the device from various
 software environments (e.g. TouchDesigner). The Luminoctopus is an 8-channel LED controller that can
 be controlled over USB. It makes it easy to pilot RGB or RGBW LED arrays, strips or matrices (WS2811
-/ WS2812 / WS2812B / WS2813 LED arrays or strips.
+/ WS2812 / WS2812B / WS2813).
 
 At its core, it uses an [OctoWS2811](https://www.pjrc.com/store/octo28_adaptor.html)-enabled 
 [Teensy 4.1](https://www.pjrc.com/store/teensy41.html) board. 
@@ -19,7 +19,7 @@ total). These threshold apply to 800kHz LEDs. If you use 400kHz LEDs, you will g
 
 It's always a tradeoff between frame rate, type of LED (RGB vs. RGBW), protocol speed, and number of
 LEDs. If you use the TouchDesigner component, the maximum number of LEDs given the current 
-parameters is shown on the OctoWS2811 parameter page.
+parameters is shown on the component's parameter page.
 
 Note that there is a hard maximum of 1365 RGB LEDs and 1023 RGBW LEDs per channel (no matter the 
 frame rate). This is due to limits imposed by the size of a single DMA transfer (32kbits).
@@ -77,7 +77,7 @@ Available commands are:
 #### Configure Device
 
 This is a system-specific command. Only the system with the specified system ID will listen to it.
-The payload for this message is: 
+The payload (specific to Luminoctopus) for this message is: 
 
 |START MARKER|COMMAND|LENGTH       |SYSTEM ID    |COLOR ORDER|SPEED      |CHECKSUM|
 |------------|-------|-------------|-------------|-----------|-----------|--------|
