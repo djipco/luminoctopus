@@ -64,26 +64,29 @@ ground (GND).
 
 #### General Messsage Format
 
+This is the general message format. **Length** identifies the length of the payload. For commands that 
+do not have a payload (such as **Update**), the length is omitted. The checksum is always present. It is
+the modulo of the command + length + payload.
+
 |START MARKER|COMMAND|LENGTH |PAYLOAD        |CHECKSUM|
 |------------|-------|-------|---------------|--------|
-|1 byte      |1 byte |2 bytes|variable length|1 byte  |
+|1 byte      |1 byte |2 bytes|variable length| 1 byte |
 
 Available commands are:
 
-* Configure Device (`0x10`)
-* Assign Colors (`0x20`)
-* Fill Color (`0x21`)
+* **Configure** (`0x10`)
+* **Assign Colors** (`0x20`)
+* **Fill Color** (`0x21`)
+* **Update** (`0x30`)
 
 #### Configure Device
 
-This is a system-specific command. Only the system with the specified system ID will listen to it.
-The payload (specific to Luminoctopus) for this message is: 
+This is usually the first command sent as it allows to specify the type of LEDs you wish to control, the
+protocol speed and the number of LEDs per channel.
 
-|START MARKER|COMMAND|LENGTH       |SYSTEM ID    |COLOR ORDER|SPEED      |CHECKSUM|
-|------------|-------|-------------|-------------|-----------|-----------|--------|
-|`0x00`      |`0x10` |`0x00` `0x02`|`0x00` `0x01`| see below | see below | modulo |
-
-System ID `0x00` `0x01` is for the Luminoctopus. Perhaps others will be added.
+|START MARKER|COMMAND|LENGTH       |COLOR ORDER|SPEED   |LEDS PER CHANNEL|CHECKSUM|
+|------------|-------|-------------|-----------|--------|----------------|--------|
+|`0x00`      |`0x10` |`0x00` `0x04`|  1 byte   | 1 byte |    2 bytes     | 1 byte |
 
 Available color orders are:
 
@@ -124,26 +127,36 @@ Available speeds are:
   * WS2811_400kHz = 64 (`0x40`)
   * WS2813_800kHz = 80 (`0x80`)
 
+The number of LEDs per channel must be 1365 or less for RGB and 1023 or less for RGBW. Two bytes are
+used to express this number.
 
 #### Assign Colors
 
-This allows assigning the color of all LEDs on a channel. If the controller has been configured to 
-use 4-component colors (RGBW), you can send 4 bytes per color. Otherwise, it defaults to 3 bytes 
-(RGB).
+This allows assigning the color of all LEDs on a channel. If the controller has been configured to use 
+4-component colors (RGBW), you can send 4 bytes per color. Otherwise, it defaults to 3 bytes (RGB).
 
-|START MARKER|COMMAND|LENGTH    |      PAYLOAD           |CHECKSUM|
-|------------|-------|----------|------------------------|--------|
-|`0x00`      |`0x20` | variable |CH + RGB... or RGBW...  | modulo |
+|START MARKER|COMMAND|LENGTH   |      PAYLOAD                |CHECKSUM|
+|------------|-------|---------|-----------------------------|--------|
+|`0x00`      |`0x20` | 2 bytes |CH + 3 (or 4) bytes for color| 1 byte |
 
 #### Fill Color
 
-This assigns the same color to all the LEDs on a channel (or all channels if 255 is specified)
+This assigns the same color to all the LEDs on a channel (or all channels if channel 255 is specified).
+It can be used to turn off the lights by sending a color of (0, 0, 0).
 
-|START MARKER|COMMAND|LENGTH    |      PAYLOAD         |CHECKSUM|
-|------------|-------|----------|----------------------|--------|
-|`0x00`      |`0x20` | variable |CH + RGB or CH + RGBW | modulo |
+|START MARKER|COMMAND|LENGTH   |      PAYLOAD         |CHECKSUM|
+|------------|-------|---------|----------------------|--------|
+|`0x00`      |`0x21` | 2 bytes |CH + RGB or CH + RGBW | 1 byte |
 
-This can be used to turn off the lights by sending a color of (0, 0, 0).
+#### Update
+
+After assigning colors with **Assign** or **Fill**, you must send the **Update** message to trigger 
+the actual update of the LEDs. This allows you to prepare more than one channel beforehand and 
+synchronize their update to happen at the same time.
+
+|START MARKER|COMMAND|CHECKSUM|
+|------------|-------|--------|
+|`0x00`      |`0x30` | 1 byte |
 
 ## Caveat
 
