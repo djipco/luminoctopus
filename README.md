@@ -74,10 +74,10 @@ the modulo of the command + length + payload.
 
 Available commands are:
 
-* **Configure** (`0x10`)
-* **Assign Colors** (`0x20`)
-* **Fill Color** (`0x21`)
-* **Update** (`0x30`)
+* **Configure** (`0x01`)
+* **Assign Colors** (`0x10`)
+* **Fill Color** (`0x11`)
+* **Update** (`0x20`)
 
 #### Configure Device
 
@@ -86,7 +86,7 @@ protocol speed and the number of LEDs per channel.
 
 |START MARKER|COMMAND|LENGTH       |COLOR ORDER|SPEED   |LEDS PER CHANNEL|CHECKSUM|
 |------------|-------|-------------|-----------|--------|----------------|--------|
-|`0x00`      |`0x10` |`0x00` `0x04`|  1 byte   | 1 byte |    2 bytes     | 1 byte |
+|`0x00`      |`0x01` |`0x00` `0x04`|  1 byte   | 1 byte |    2 bytes     | 1 byte |
 
 Available color orders are:
 
@@ -137,7 +137,7 @@ This allows assigning the color of all LEDs on a channel. If the controller has 
 
 |START MARKER|COMMAND|LENGTH   |      PAYLOAD                |CHECKSUM|
 |------------|-------|---------|-----------------------------|--------|
-|`0x00`      |`0x20` | 2 bytes |CH + 3 (or 4) bytes for color| 1 byte |
+|`0x00`      |`0x10` | 2 bytes |CH + 3 (or 4) bytes for color| 1 byte |
 
 #### Fill Color
 
@@ -146,7 +146,7 @@ It can be used to turn off the lights by sending a color of (0, 0, 0).
 
 |START MARKER|COMMAND|LENGTH   |      PAYLOAD         |CHECKSUM|
 |------------|-------|---------|----------------------|--------|
-|`0x00`      |`0x21` | 2 bytes |CH + RGB or CH + RGBW | 1 byte |
+|`0x00`      |`0x11` | 2 bytes |CH + RGB or CH + RGBW | 1 byte |
 
 #### Update
 
@@ -156,7 +156,7 @@ synchronize their update to happen at the same time.
 
 |START MARKER|COMMAND|CHECKSUM|
 |------------|-------|--------|
-|`0x00`      |`0x30` | 1 byte |
+|`0x00`      |`0x20` | 1 byte |
 
 ## Caveat
 
