@@ -28,7 +28,7 @@
 
 // Library name and version
 constexpr const char* LIB_NAME               = "Luminoctopus";
-constexpr const char* LIB_VERSION            = "1.0.0-alpha.4";
+constexpr const char* LIB_VERSION            = "1.0.0-alpha.5";
 
 // General constants
 constexpr uint8_t  CHANNEL_COUNT             =      8; // Number of channels available on device
