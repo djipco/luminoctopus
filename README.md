@@ -31,6 +31,12 @@ Speed** (12Mbits/s) or **USB 2.0 High Speed** (480Mbits/s). To update 1365 LEDs 
 must send about 44KB of data. To do this at 30Hz, it needs a bandwidth of 1250KB/s (~10Mbps). This is below the
 12Mbps limit of USB 1.1, but a little close.
 
+## Caveat
+
+> [!CAUTION]  
+> This is alpha software and might not be production ready. I'm having good success with it but your
+> mileage may vary. Report issues if you find any. Cheers!
+
 ## How can I use it?
 
 As of now, the only library available is for the TouchDesigner environment. You can find the 
@@ -56,12 +62,6 @@ out the documentation for the [OctoWS2811 adapter](https://www.pjrc.com/store/oc
 
 Note that, within each of the Ethernet cable's twisted pairs, the full-color wire is for data and the 
 color+white wire is for ground (GND). 
-
-## Caveat
-
-> [!CAUTION]  
-> This is alpha software and might not be production ready. I'm having good success with it but your
-> mileage may vary. Report issues if you find any. Cheers!
 
 ## Protocol
 
