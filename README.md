@@ -2,10 +2,10 @@
 
 ## Introduction
 
-This repository hosts the Luminoctopus firmware as well as libraries to use the device from various
-software environments (e.g. TouchDesigner). The Luminoctopus is an 8-channel LED controller that can
-be controlled over USB. It makes it easy to pilot RGB or RGBW LED arrays, strips or matrices (WS2811
-/ WS2812 / WS2812B / WS2813).
+This repository hosts the **Luminoctopus** firmware as well as a component to use the device from 
+[TouchDesigner](https://derivative.ca/). The Luminoctopus is an 8-channel LED controller that uses 
+a fast serial-over-USB connection. It makes it easy to pilot RGB or RGBW LED arrays, strips or 
+matrices (WS2811 / WS2812 / WS2812B / WS2813).
 
 At its core, it uses an [OctoWS2811](https://www.pjrc.com/store/octo28_adaptor.html)-enabled 
 [Teensy 4.1](https://www.pjrc.com/store/teensy41.html) board. 
@@ -13,22 +13,23 @@ At its core, it uses an [OctoWS2811](https://www.pjrc.com/store/octo28_adaptor.h
 ## How many LEDs can be controlled?
 
 This project allows you to reliably control a maximum of 1365 addressable RGB LEDs per channel at a 
-refresh rate of 24Hz. This yields a total of 10920 LEDs for all 8 channels. However, if you want to 
-maintain a refresh rate of 30Hz, you will have to lower the number of LEDs to 1101 per channel (8808
-total). These threshold apply to 800kHz LEDs. If you use 400kHz LEDs, you will get half that. 
+refresh rate of 24Hz. This yields a total of 10 920 LEDs for all 8 channels. **At a refresh rate of 30Hz, 
+it supports 1101 LEDs per channel (8 808 total)**. These threshold apply to standard 800kHz RGB LEDs. If 
+you use 400kHz LEDs, you will get half those numbers. 
 
-It's always a tradeoff between frame rate, type of LED (RGB vs. RGBW), protocol speed, and number of
-LEDs. If you use the TouchDesigner component, the maximum number of LEDs given the current 
-parameters is shown on the component's parameter page.
+The maximum number of supported LEDs depend on desired refresh rate, type of LED (RGB vs. RGBW), and
+protocol speed (400kHz vs. 800kHz). There is a **hard maximum of 1365 RGB LEDs and 1023 RGBW LEDs per 
+channel** (no matter the refresh rate). This is due to limits imposed by the size of a single DMA transfer 
+(32kbits) on the microcontroller.
 
-Note that there is a hard maximum of 1365 RGB LEDs and 1023 RGBW LEDs per channel (no matter the 
-frame rate). This is due to limits imposed by the size of a single DMA transfer (32kbits).
+> [!NOTE]  
+> _To help you figure out the usable maximum, the TouchDesigner component computes and displays the maximum
+> number of LEDs per channel given the currently selected settings._
 
-The USB communication speed usually is not an issue. The Teensy supports either USB 1.1 Full Speed 
-(12Mbits/s) and USB 2.0 High Speed (480Mbits/s). To update 1365 LEDs on each of the 8 channels, you
-must send about 44KB of data. If you want to do this at 30Hz, your going to need a bandwidth of 
-1250KB/s or 10Mbps. This is below the 12Mbps limit of USB 1.1 but you probably are using USB 2.0 
-anyway.
+To be on the safe side, you should use USB 2.0 or more recent. Luminoctopus connects at either **USB 1.1 Full
+Speed** (12Mbits/s) or **USB 2.0 High Speed** (480Mbits/s). To update 1365 LEDs on each of the 8 channels, it 
+must send about 44KB of data. To do this at 30Hz, it needs a bandwidth of 1250KB/s (~10Mbps). This is below the
+12Mbps limit of USB 1.1, but a little close.
 
 ## How can I use it?
 
@@ -53,40 +54,49 @@ out the documentation for the [OctoWS2811 adapter](https://www.pjrc.com/store/oc
 | 2. Green         | 6. Green             |
 | 3. Brown         | 7. Brown             |
 
-Note that, within each twisted pair, the full-color wire is for data and the color+white wire is for 
-ground (GND). 
+Note that, within each of the Ethernet cable's twisted pairs, the full-color wire is for data and the 
+color+white wire is for ground (GND). 
+
+## Caveat
+
+> [!CAUTION]  
+> This is alpha software and might not be production ready. I'm having good success with it but your
+> mileage may vary. Report issues if you find any. Cheers!
 
 ## Protocol
 
-> [!NOTE]  
-> If you just want to use the device and library, you do not need to read anything beyond this point.
-> However, if you want to use or understand the protocol itself, you will find some info below.
+This is advanced information about the binary format used to send commands to Luminoctopus using its 
+native protocol.
+
+> [!IMPORTANT]  
+> _If you just want to use the device and library, you do not need to read anything beyond this point.
+> However, if you want to use or understand the protocol itself, you will find some info below._
 
 #### General Messsage Format
 
 This is the general message format. **Length** identifies the length of the payload. For commands that 
-do not have a payload (such as **Update**), the length is omitted. The checksum is always present. It is
-the modulo of the command + length + payload.
+do not have a payload (such as **Update**), the length is omitted. The checksum is always present. It
+is the modulo of `command` + `payload length` + `payload`.
 
-|START MARKER|COMMAND|LENGTH |PAYLOAD        |CHECKSUM|
-|------------|-------|-------|---------------|--------|
-|1 byte      |1 byte |2 bytes|variable length| 1 byte |
+|START MARKER          |COMMAND                         |PAYLOAD LENGTH                               |PAYLOAD                                              |CHECKSUM                        |
+|----------------------|--------------------------------|---------------------------------------------|-----------------------------------------------------|--------------------------------|
+|**1 byte**<br>(`0x00`)|**1 byte**<br>(`0x01` to `0xFF`)|**2 bytes**<br>(omitted for certain commands)|**variable length**<br>(omitted for certain commands)|**1 byte**<br>(`0x01` to `0xFF`)|
 
-Available commands are:
+#### Currentyl Available Commands
 
 * **Configure** (`0x01`)
 * **Assign Colors** (`0x10`)
 * **Fill Color** (`0x11`)
 * **Update** (`0x20`)
 
-#### Configure Device
+#### Configure Device Command
 
-This is usually the first command sent as it allows to specify the type of LEDs you wish to control, the
-protocol speed and the number of LEDs per channel.
+This is usually the first command sent as it allows to specify the type of LEDs you wish to control, 
+the protocol speed and the number of LEDs per channel.
 
-|START MARKER|COMMAND|LENGTH       |COLOR ORDER|SPEED   |LEDS PER CHANNEL|CHECKSUM|
-|------------|-------|-------------|-----------|--------|----------------|--------|
-|`0x00`      |`0x01` |`0x00` `0x04`|  1 byte   | 1 byte |    2 bytes     | 1 byte |
+|START MARKER|COMMAND|PAYLOAD LENGTH|COLOR ORDER|SPEED   |LEDS PER CHANNEL|CHECKSUM|
+|------------|-------|--------------|-----------|--------|----------------|--------|
+|`0x00`      |`0x01` |`0x00` `0x04` |  1 byte   | 1 byte |    2 bytes     | 1 byte |
 
 Available color orders are:
 
@@ -130,25 +140,26 @@ Available speeds are:
 The number of LEDs per channel must be 1365 or less for RGB and 1023 or less for RGBW. Two bytes are
 used to express this number.
 
-#### Assign Colors
+#### Assign Colors Command
 
-This allows assigning the color of all LEDs on a channel. If the controller has been configured to use 
-4-component colors (RGBW), you can send 4 bytes per color. Otherwise, it defaults to 3 bytes (RGB).
+This allows to individually assigning the color of all LEDs on a channel. If the controller has been 
+configured to use 4-component colors (RGBW), you can send 4 bytes per color. Otherwise, it defaults to 
+3 bytes (RGB).
 
-|START MARKER|COMMAND|LENGTH   |      PAYLOAD                |CHECKSUM|
-|------------|-------|---------|-----------------------------|--------|
-|`0x00`      |`0x10` | 2 bytes |CH + 3 (or 4) bytes for color| 1 byte |
+|START MARKER|COMMAND|PAYLOAD LENGTH|PAYLOAD                                             |CHECKSUM|
+|------------|-------|--------------|----------------------------------------------------|--------|
+|`0x00`      |`0x10` | 2 bytes      |Channel number + 3 (or 4) bytes for each LED's color| 1 byte |
 
-#### Fill Color
+#### Fill Color Command
 
-This assigns the same color to all the LEDs on a channel (or all channels if channel 255 is specified).
+This assigns the same color to all the LEDs on a channel (or all channels, if channel 255 is specified).
 It can be used to turn off the lights by sending a color of (0, 0, 0).
 
-|START MARKER|COMMAND|LENGTH   |      PAYLOAD         |CHECKSUM|
-|------------|-------|---------|----------------------|--------|
-|`0x00`      |`0x11` | 2 bytes |CH + RGB or CH + RGBW | 1 byte |
+|START MARKER|COMMAND|PAYLOAD LENGTH|PAYLOAD                               |CHECKSUM|
+|------------|-------|--------------|---------------------------------------|--------|
+|`0x00`      |`0x11` | 2 bytes      |Channel number + R + G + B (or R+G+B+W)| 1 byte |
 
-#### Update
+#### Update Command
 
 After assigning colors with **Assign** or **Fill**, you must send the **Update** message to trigger 
 the actual update of the LEDs. This allows you to prepare more than one channel beforehand and 
@@ -158,9 +169,4 @@ synchronize their update to happen at the same time.
 |------------|-------|--------|
 |`0x00`      |`0x20` | 1 byte |
 
-## Caveat
-
-> [!CAUTION]  
-> This is alpha software and might not be production ready. I'm having good success with it but your
-> mileage may vary. Report issues if you find any. Cheers!
-
+This command always updates all channels.
