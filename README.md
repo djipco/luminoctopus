@@ -3,9 +3,9 @@
 ## Introduction
 
 This repository hosts the **Luminoctopus** firmware as well as a component to control the device from 
-[TouchDesigner](https://derivative.ca/). The Luminoctopus is an 8-channel LED controller that uses 
-a fast serial-over-USB connection. It makes it easy to pilot RGB or RGBW LED arrays, strips or 
-matrices (WS2811 / WS2812 / WS2812B / WS2813).
+[TouchDesigner](https://derivative.ca/). The Luminoctopus is an 8-channel LED controller that uses a fast
+serial-over-USB connection. It makes it easy to pilot RGB or RGBW LED arrays, strips or matrices (WS2811 / 
+WS2812 / WS2812B / WS2813).
 
 At its core, it uses an [OctoWS2811](https://www.pjrc.com/store/octo28_adaptor.html)-enabled 
 [Teensy 4.1](https://www.pjrc.com/store/teensy41.html) board. 
@@ -91,8 +91,9 @@ is the modulo of `command` + `payload length` + `payload`.
 
 #### Configure Device Command
 
-This is usually the first command sent as it allows to specify the type of LEDs you wish to control, 
-the protocol speed and the number of LEDs per channel.
+This is usually the first command sent since it allows to specify the type of LEDs you wish to control, the 
+protocol speed and the number of LEDs per channel. If this command is not sent, the device is configured by
+default to use 100 LEDs per channel, using GRB order, and a speed of 800kHz.
 
 |START MARKER|COMMAND|PAYLOAD LENGTH|COLOR ORDER|SPEED   |LEDS PER CHANNEL|CHECKSUM|
 |------------|-------|--------------|-----------|--------|----------------|--------|
