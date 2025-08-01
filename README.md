@@ -2,9 +2,9 @@
 
 ## Introduction
 
-This repository hosts the **Luminoctopus** firmware as well as a component to control the device from 
-[TouchDesigner](https://derivative.ca/). The Luminoctopus is an 8-channel LED controller that uses 
-a fast serial-over-USB connection. It makes it easy to pilot RGB or RGBW LED arrays, strips or 
+This repository hosts the **Luminoctopus** firmware as well as a component to control the device 
+from [TouchDesigner](https://derivative.ca/). The Luminoctopus is an 8-channel LED controller that 
+uses a fast serial-over-USB connection. It makes it easy to pilot RGB or RGBW LED arrays, strips or 
 matrices (WS2811 / WS2812 / WS2812B / WS2813).
 
 At its core, it uses an [OctoWS2811](https://www.pjrc.com/store/octo28_adaptor.html)-enabled 
@@ -13,23 +13,22 @@ At its core, it uses an [OctoWS2811](https://www.pjrc.com/store/octo28_adaptor.h
 ## How many LEDs can be controlled?
 
 This project allows you to reliably control a maximum of 1365 addressable RGB LEDs per channel at a 
-refresh rate of 24Hz. This yields a total of 10 920 LEDs for all 8 channels. **At a refresh rate of 30Hz, 
-it supports 1101 LEDs per channel (8 808 total)**. These threshold apply to standard 800kHz RGB LEDs. If 
-you use 400kHz LEDs, you will get half those numbers. 
+refresh rate of 24Hz. This yields a total of 10 920 LEDs for all 8 channels. **At a refresh rate of 30Hz, it supports 1101 LEDs per channel (8 808 total)**. These threshold apply to standard 800kHz 
+RGB LEDs. If you use 400kHz LEDs, you will get half those numbers. 
 
 The maximum number of supported LEDs depend on desired refresh rate, type of LED (RGB vs. RGBW), and
-protocol speed (400kHz vs. 800kHz). There is a **hard maximum of 1365 RGB LEDs and 1023 RGBW LEDs per 
-channel** (no matter the refresh rate). This is due to limits imposed by the size of a single DMA transfer 
-(32kbits) on the microcontroller.
+protocol speed (400kHz vs. 800kHz). There is a **hard maximum of 1365 RGB LEDs and 1023 RGBW LEDs 
+per channel** (no matter the refresh rate). This is due to limits imposed by the size of a single 
+DMA transfer (32kbits) on the microcontroller.
 
 > [!NOTE]  
-> _To help you figure out the usable maximum, the TouchDesigner component computes and displays the maximum
-> number of LEDs per channel given the currently selected settings._
+> _To help you figure out the usable maximum, the TouchDesigner component computes and displays the 
+> maximum number of LEDs per channel given the currently selected settings._
 
-To be on the safe side, you should use USB 2.0 or more recent. Luminoctopus connects at either **USB 1.1 Full
-Speed** (12Mbits/s) or **USB 2.0 High Speed** (480Mbits/s). To update 1365 LEDs on each of the 8 channels, it 
-must send about 44KB of data. To do this at 30Hz, it needs a bandwidth of 1250KB/s (~10Mbps). This is below the
-12Mbps limit of USB 1.1, but a little close.
+To be on the safe side, you should use USB 2.0 or more recent. Luminoctopus connects at either **USB 
+1.1 Full Speed** (12Mbits/s) or **USB 2.0 High Speed** (480Mbits/s). To update 1365 LEDs on each of 
+the 8 channels, it must send about 44KB of data. To do this at 30Hz, it needs a bandwidth of 
+1250KB/s (~10Mbps). This is below the 12Mbps limit of USB 1.1, but a little close.
 
 ## Caveat
 
@@ -60,8 +59,8 @@ out the documentation for the [OctoWS2811 adapter](https://www.pjrc.com/store/oc
 | 2. Green         | 6. Green             |
 | 3. Brown         | 7. Brown             |
 
-Note that, within each of the Ethernet cable's twisted pairs, usuallt, the full-color wire is for data 
-and the color+white wire is for ground (GND). 
+Note that, within each of the Ethernet cable's twisted pairs, usuallt, the full-color wire is for 
+data and the color+white wire is for ground (GND). 
 
 ## Protocol
 
@@ -69,14 +68,15 @@ This is advanced information about the binary format used to send commands to Lu
 native protocol.
 
 > [!IMPORTANT]  
-> _If you just want to use the device and library, you do not need to read anything beyond this point.
-> However, if you want to use or understand the protocol itself, you will find some info below._
+> _If you just want to use the device and library, you do not need to read anything beyond this 
+> point. However, if you want to use or understand the protocol itself, you will find some info 
+> below._
 
 #### General Messsage Format
 
-This is the general message format. **Length** identifies the length of the payload. For commands that 
-do not have a payload (such as **Update**), the length is omitted. The checksum is always present. It
-is the modulo of `command` + `payload length` + `payload`.
+This is the general message format. **Length** identifies the length of the payload. For commands 
+that do not have a payload (such as **Update**), the length is omitted. The checksum is always 
+present. It is the modulo of `command` + `payload length` + `payload`.
 
 |START MARKER          |COMMAND                         |PAYLOAD LENGTH                               |PAYLOAD                                              |CHECKSUM                        |
 |----------------------|--------------------------------|---------------------------------------------|-----------------------------------------------------|--------------------------------|
