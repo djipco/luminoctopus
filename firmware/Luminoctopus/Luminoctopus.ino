@@ -203,7 +203,6 @@ void configure(
     return;
   }
 
-  // You could also add speed validation here:
   if (!isValidSpeed(speed)) {
       Serial.println("Invalid speed setting");
       return;
