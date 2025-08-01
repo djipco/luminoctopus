@@ -10,6 +10,10 @@ matrices (WS2811 / WS2812 / WS2812B / WS2813).
 At its core, it uses an [OctoWS2811](https://www.pjrc.com/store/octo28_adaptor.html)-enabled 
 [Teensy 4.1](https://www.pjrc.com/store/teensy41.html) board. 
 
+> [!CAUTION]  
+> _This is alpha software and might not be production ready. I'm having good success with it but your
+> mileage may vary. Report issues if you find any. Cheers!_
+
 ## How many LEDs can be controlled?
 
 This project allows you to reliably control a maximum of 1365 addressable RGB LEDs per channel at a 
@@ -29,12 +33,6 @@ To be on the safe side, you should use USB 2.0 or more recent. Luminoctopus conn
 1.1 Full Speed** (12Mbits/s) or **USB 2.0 High Speed** (480Mbits/s). To update 1365 LEDs on each of 
 the 8 channels, it must send about 44KB of data. To do this at 30Hz, it needs a bandwidth of 
 1250KB/s (~10Mbps). This is below the 12Mbps limit of USB 1.1, but a little close.
-
-## Caveat
-
-> [!CAUTION]  
-> This is alpha software and might not be production ready. I'm having good success with it but your
-> mileage may vary. Report issues if you find any. Cheers!
 
 ## How can I use it?
 
