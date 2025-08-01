@@ -35,9 +35,12 @@ constexpr uint8_t  CHANNEL_COUNT             =      8; // Number of channels ava
 constexpr uint8_t  BROADCAST_CHANNEL         =    255; // 255 => "broadcast to all channels"
 constexpr uint16_t MAX_RGB_LEDS_PER_CHANNEL  =   1365; // Hardware limit due to DMA transfer speed
 constexpr uint16_t MAX_RGBW_LEDS_PER_CHANNEL =   1023; // Hardware limit due to DMA transfer speed
+constexpr uint16_t DEFAULT_CHANNEL_COUNT     =    300; // Default number of LEDs per channel
 constexpr uint16_t MAX_PAYLOAD               =   8192; // Max payload size (in bytes)
 constexpr uint8_t  SOF_MARKER                =   0x00; // Start of frame marker
 constexpr uint16_t SYSTEM_ID                 = 0x0001; // Luminoctopus system ID (0x00 0x01)
+constexpr uint8_t  CHECKSUM_MODULO           =    256; // Modulo for checksum
+constexpr size_t   BUFFER_MULTIPLIER         =      6; // Multiplier for buffer
 
 // Command identifier constants
 constexpr uint8_t  CMD_CONFIGURE             =   0x01;  // Configure system
@@ -137,7 +140,7 @@ bool allocateBuffers(uint16_t ledCount) {
   }
   
   // Calculate required buffer size
-  size_t bufferSize = ledCount * 6 * sizeof(int);
+  size_t bufferSize = ledCount * BUFFER_MULTIPLIER * sizeof(int);
   
   // Allocate new buffers
   dmaBuffer = (int*)malloc(bufferSize);
@@ -189,26 +192,33 @@ bool createOctoWS2811Instance(uint16_t ledCount, int configFlags) {
 
 }
 
-void configure(uint8_t order = WS2811_GRB, uint8_t speed = WS2811_800kHz, uint16_t ledCount = 100) {
+void configure(
+  uint8_t order = WS2811_GRB, 
+  uint8_t speed = WS2811_800kHz, 
+  uint16_t ledCount = DEFAULT_CHANNEL_COUNT
+) {
+
+  if (!isValidColorOrder(order)) {
+    Serial.println("Invalid color order");
+    return;
+  }
+
+  // You could also add speed validation here:
+  if (!isValidSpeed(speed)) {
+      Serial.println("Invalid speed setting");
+      return;
+  }
 
   bool is4 = (colorOrderMap[order] >= WS2811_RGBW);
-
-  if (is4) {
-    if (ledCount > MAX_RGBW_LEDS_PER_CHANNEL) {
-      Serial.print("Invalid LED count: ");
-      Serial.print(ledCount);
-      Serial.print(". Must be between 1 and ");
-      Serial.print(MAX_RGBW_LEDS_PER_CHANNEL);
-      Serial.println(".");
-    }
-  } else {
-    if (ledCount > MAX_RGB_LEDS_PER_CHANNEL) {
-      Serial.print("Invalid LED count: ");
-      Serial.print(ledCount);
-      Serial.print(". Must be between 1 and ");
-      Serial.print(MAX_RGB_LEDS_PER_CHANNEL);
-      Serial.println(".");
-    }
+  uint16_t maxLeds = is4 ? MAX_RGBW_LEDS_PER_CHANNEL : MAX_RGB_LEDS_PER_CHANNEL;
+    
+  if (ledCount == 0 || ledCount > maxLeds) {
+    Serial.print("Invalid LED count: ");
+    Serial.print(ledCount);
+    Serial.print(". Must be between 1 and ");
+    Serial.print(maxLeds);
+    Serial.println(".");
+    return;
   }
 
   // Create new OctoWS2811 instance with the requested configuration
@@ -249,7 +259,7 @@ void sendConfigurationOnSerial(uint8_t order, uint8_t speed, uint16_t ledCount) 
     case WS2811_800kHz: Serial.print("800kHz, WS2811"); break;
     case WS2811_400kHz: Serial.print("400kHz, WS2811"); break;
     case WS2813_800kHz: Serial.print("800kHz, WS2813"); break;
-    default:            Serial.print("Unknown"); break;
+    default:            Serial.print("Unknown");        break;
   }
 
   // Number of LEDs
@@ -266,7 +276,7 @@ void setup() {
   // call Serial.begin(). Details: https://www.pjrc.com/teensy/td_serial.html
 
   // Initialize OctoWS2811 with default configuration
-  if (!createOctoWS2811Instance(MAX_RGBW_LEDS_PER_CHANNEL, WS2811_GRB | WS2811_800kHz)) {
+  if (!createOctoWS2811Instance(DEFAULT_CHANNEL_COUNT, WS2811_GRB | WS2811_800kHz)) {
     Serial.println("Failed to initialize LED system");
     while(1); // Halt execution
   }
@@ -380,11 +390,11 @@ void readSerialByte(uint8_t b) {
       
     // Verify checksum
     case ParseState::READ_CHK:
-      if (checksumData % 256 == b) {
+      if (checksumData % CHECKSUM_MODULO == b) {
         processCommand();
       } else {
         Serial.print("Checksum mismatch. Expected: ");
-        Serial.print(checksumData % 256);
+        Serial.print(checksumData % CHECKSUM_MODULO);
         Serial.print(", Received: ");
         Serial.println(b);
       }
@@ -439,30 +449,42 @@ void handleConfigureCommand() {
   uint16_t count = payload[2] | (payload[3] << 8);
 
   // Validate if color order, speed and count are valid
-  bool validColor = (colorOrder < COLOR_ORDER_COUNT);
-  bool validSpeed = (speed == WS2811_800kHz || speed == WS2811_400kHz || speed == WS2813_800kHz);
+  bool validColor = isValidColorOrder(colorOrder);
+  bool validSpeed = isValidSpeed(speed);
 
   // Validate LED count (depends on component count)
-  bool validLedCount = (count > 0 && count <= MAX_RGB_LEDS_PER_CHANNEL);
+  bool validLedCount;
+
+  if (validColor && colorOrderMap[colorOrder] >= WS2811_RGBW) {
+    validLedCount = (count > 0 && count <= MAX_RGBW_LEDS_PER_CHANNEL);
+  } else {
+    validLedCount = (count > 0 && count <= MAX_RGB_LEDS_PER_CHANNEL);
+  }
   
   if (!validColor) {
     Serial.print("Invalid color order code: ");
     Serial.println(colorOrder);
   }
+
   if (!validSpeed) {
     Serial.print("Invalid speed flag: 0x");
     Serial.println(speed, HEX);
   }
+
   if (!validLedCount) {
     Serial.print("Invalid LED count: ");
     Serial.print(count);
     Serial.print(". Must be between 1 and ");
-    Serial.print(MAX_RGBW_LEDS_PER_CHANNEL);
+    if (validColor && colorOrderMap[colorOrder] >= WS2811_RGBW) {
+      Serial.print(MAX_RGBW_LEDS_PER_CHANNEL);
+    } else {
+      Serial.print(MAX_RGB_LEDS_PER_CHANNEL);
+    }
     Serial.println(".");
   }
   
   if (validColor && validSpeed && validLedCount) {
-    configure(colorOrderMap[colorOrder], speed, count);
+    configure(colorOrder, speed, count);
     sendConfigurationOnSerial(colorOrderMap[colorOrder], speed, count);
   } else {
     Serial.println("Configuration rejected.");
@@ -493,6 +515,12 @@ void handleAssignColorsCommand() {
   
   // Calculate number of LEDs in this payload
   uint16_t ledsInPayload = (len - 1) / componentsPerPixel;
+
+  // Check if we're trying to write beyond the allocated LEDs
+  if (ledsInPayload > ledsPerChannel) {
+    Serial.println("Too many LEDs in payload for channel");
+    return;
+  }
   
   // Prepare data and index for the loop
   const uint8_t* data = &payload[1];
@@ -527,6 +555,12 @@ void handleFillColorCommand() {
   
   // Channel
   uint8_t ch = payload[0];
+
+  if (!isValidChannel(ch)) {
+    Serial.print("Invalid channel: ");
+    Serial.println(ch);
+    return;
+  }
 
   // Color
   uint8_t r = payload[1];
@@ -568,4 +602,16 @@ void handleUpdateCommand() {
 
   frameReady = true; // Tells the main loop() to update
 
+}
+
+bool isValidChannel(uint8_t ch) {
+  return ch < CHANNEL_COUNT || ch == BROADCAST_CHANNEL;
+}
+
+bool isValidColorOrder(uint8_t order) {
+  return order < COLOR_ORDER_COUNT;
+}
+
+bool isValidSpeed(uint8_t speed) {
+  return speed == WS2811_800kHz || speed == WS2811_400kHz || speed == WS2813_800kHz;
 }
