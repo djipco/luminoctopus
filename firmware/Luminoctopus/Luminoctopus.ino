@@ -39,8 +39,8 @@ constexpr uint16_t DEFAULT_CHANNEL_COUNT     =    300; // Default number of LEDs
 constexpr uint16_t MAX_PAYLOAD               =   8192; // Max payload size (in bytes)
 constexpr uint8_t  SOF_MARKER                =   0x00; // Start of frame marker
 constexpr uint16_t SYSTEM_ID                 = 0x0001; // Luminoctopus system ID (0x00 0x01)
-constexpr uint8_t  CHECKSUM_MODULO           =    256; // Modulo for checksum
-constexpr size_t   BUFFER_MULTIPLIER         =      6; // Multiplier for buffer
+constexpr uint16_t CHECKSUM_MODULO           =    256; // Modulo for checksum
+constexpr uint8_t  BUFFER_MULTIPLIER         =      6; // Multiplier for buffer
 
 // Command identifier constants
 constexpr uint8_t  CMD_CONFIGURE             =   0x01;  // Configure system
@@ -518,7 +518,9 @@ void handleAssignColorsCommand() {
 
   // Check if we're trying to write beyond the allocated LEDs
   if (ledsInPayload > ledsPerChannel) {
-    Serial.println("Too many LEDs in payload for channel");
+    #if DEBUG
+    Serial.println("Payload is too large. Ignoring.");
+    #endif
     return;
   }
   
