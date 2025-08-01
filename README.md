@@ -91,9 +91,9 @@ present. It is the modulo of `command` + `payload length` + `payload`.
 
 #### Configure Device Command
 
-This is usually the first command sent since it allows to specify the type of LEDs you wish to control, the 
-protocol speed and the number of LEDs per channel. If this command is not sent, the device is configured by
-default to use 100 LEDs per channel, using GRB order, and a speed of 800kHz.
+This is usually the first command sent since it allows to specify the type of LEDs you wish to 
+control, the protocol speed and the number of LEDs per channel. If this command is not sent, the 
+device is configured by default to use 300 LEDs per channel, using GRB order, and a speed of 800kHz.
 
 |START MARKER|COMMAND|PAYLOAD LENGTH|COLOR ORDER|SPEED   |LEDS PER CHANNEL|CHECKSUM|
 |------------|-------|--------------|-----------|--------|----------------|--------|
@@ -144,8 +144,8 @@ used to express this number.
 #### Assign Colors Command
 
 This allows to individually assigning the color of all LEDs on a channel. If the controller has been 
-configured to use 4-component colors (RGBW), you can send 4 bytes per color. Otherwise, it defaults to 
-3 bytes (RGB).
+configured to use 4-component colors (RGBW), you can send 4 bytes per color. Otherwise, it defaults 
+to 3 bytes (RGB).
 
 |START MARKER|COMMAND|PAYLOAD LENGTH|PAYLOAD                                             |CHECKSUM|
 |------------|-------|--------------|----------------------------------------------------|--------|
@@ -153,8 +153,8 @@ configured to use 4-component colors (RGBW), you can send 4 bytes per color. Oth
 
 #### Fill Color Command
 
-This assigns the same color to all the LEDs on a channel (or all channels, if channel 255 is specified).
-It can be used to turn off the lights by sending a color of (0, 0, 0).
+This assigns the same color to all the LEDs on a channel (or all channels, if channel 255 is 
+specified). It can be used to turn off the lights by sending a color of (0, 0, 0).
 
 |START MARKER|COMMAND|PAYLOAD LENGTH|PAYLOAD                               |CHECKSUM|
 |------------|-------|--------------|---------------------------------------|--------|
