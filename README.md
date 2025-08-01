@@ -91,8 +91,9 @@ present. It is the modulo of `command` + `payload length` + `payload`.
 
 #### Configure Device Command
 
-This is usually the first command sent as it allows to specify the type of LEDs you wish to control, 
-the protocol speed and the number of LEDs per channel.
+This is usually the first command sent since it allows to specify the type of LEDs you wish to control, the 
+protocol speed and the number of LEDs per channel. If this command is not sent, the device is configured by
+default to use 100 LEDs per channel, using GRB order, and a speed of 800kHz.
 
 |START MARKER|COMMAND|PAYLOAD LENGTH|COLOR ORDER|SPEED   |LEDS PER CHANNEL|CHECKSUM|
 |------------|-------|--------------|-----------|--------|----------------|--------|
