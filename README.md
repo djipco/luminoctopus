@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This repository hosts the **Luminoctopus** firmware as well as a component to use the device from 
+This repository hosts the **Luminoctopus** firmware as well as a component to control the device from 
 [TouchDesigner](https://derivative.ca/). The Luminoctopus is an 8-channel LED controller that uses 
 a fast serial-over-USB connection. It makes it easy to pilot RGB or RGBW LED arrays, strips or 
 matrices (WS2811 / WS2812 / WS2812B / WS2813).
