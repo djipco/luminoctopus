@@ -82,7 +82,7 @@ is the modulo of `command` + `payload length` + `payload`.
 |----------------------|--------------------------------|---------------------------------------------|-----------------------------------------------------|--------------------------------|
 |**1 byte**<br>(`0x00`)|**1 byte**<br>(`0x01` to `0xFF`)|**2 bytes**<br>(omitted for certain commands)|**variable length**<br>(omitted for certain commands)|**1 byte**<br>(`0x01` to `0xFF`)|
 
-#### Currentyl Available Commands
+#### Currently Available Commands
 
 * **Configure** (`0x01`)
 * **Assign Colors** (`0x10`)
