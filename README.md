@@ -60,8 +60,8 @@ out the documentation for the [OctoWS2811 adapter](https://www.pjrc.com/store/oc
 | 2. Green         | 6. Green             |
 | 3. Brown         | 7. Brown             |
 
-Note that, within each of the Ethernet cable's twisted pairs, the full-color wire is for data and the 
-color+white wire is for ground (GND). 
+Note that, within each of the Ethernet cable's twisted pairs, usuallt, the full-color wire is for data 
+and the color+white wire is for ground (GND). 
 
 ## Protocol
 
