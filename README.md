@@ -17,7 +17,8 @@ At its core, it uses an [OctoWS2811](https://www.pjrc.com/store/octo28_adaptor.h
 ## How many LEDs can be controlled?
 
 This project allows you to reliably control a maximum of 1365 addressable RGB LEDs per channel at a 
-refresh rate of 24Hz. This yields a total of 10 920 LEDs for all 8 channels. **At a refresh rate of 30Hz, it supports 1101 LEDs per channel (8 808 total)**. These threshold apply to standard 800kHz 
+refresh rate of 24Hz. This yields a total of 10 920 LEDs for all 8 channels. **At a refresh rate of 
+30Hz, it supports 1101 LEDs per channel (8 808 total)**. These threshold apply to standard 800kHz 
 RGB LEDs. If you use 400kHz LEDs, you will get half those numbers. 
 
 The maximum number of supported LEDs depend on desired refresh rate, type of LED (RGB vs. RGBW), and
@@ -57,7 +58,7 @@ out the documentation for the [OctoWS2811 adapter](https://www.pjrc.com/store/oc
 | 2. Green         | 6. Green             |
 | 3. Brown         | 7. Brown             |
 
-Note that, within each of the Ethernet cable's twisted pairs, usuallt, the full-color wire is for 
+Note that, within each of the Ethernet cable's twisted pairs, usually, the full-color wire is for 
 data and the color+white wire is for ground (GND). 
 
 ## Protocol
