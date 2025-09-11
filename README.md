@@ -41,7 +41,7 @@ the 8 channels, it must send about 44KB of data. To do this at 30Hz, it needs a 
 
 If it has not already been installed, you will need to install the firmware on the Luminoctopus 
 device. To do so, use the [Arduino IDE](https://www.arduino.cc/en/software/) to upload 
-`Luminoctopus.ino` to the device. 
+`firmware/Luminoctopus/Luminoctopus.ino` to the device. 
 
 > [!NOTE]
 > To update the formware on the Luminoctopus, you need to install the Teensy board extension (if
