@@ -37,14 +37,25 @@ the 8 channels, it must send about 44KB of data. To do this at 30Hz, it needs a 
 
 ## How can I use it?
 
+#### Firmware
+
+If it has not already been installed, you will need to install the firmware on the Luminoctopus 
+device. To do so, use the [Arduino IDE](https://www.arduino.cc/en/software/) to upload 
+`Luminoctopus.ino` to the device. 
+
+> [!NOTE] To update the formware on the Luminoctopus, you need to install the Teensy board
+> extension (if not present) in the Arduino IDE. To do so, follow these
+> [instructions](https://www.pjrc.com/teensy/td_download.html). 
+
+#### TouchDesigner Component
+
 As of now, the only library available is for the TouchDesigner environment. You can find the 
 `Luminoctopus.tox` file in `libraries/touchdesigner/`. To use it, simply drag and drop the `.tox` 
 file to your project and enter the appropriate settings.
 
-To install the firmware on the Luminoctopus device (if not already present), use the 
-[Arduino IDE](https://www.arduino.cc/en/software/) to upload `Luminoctopus.ino` to the Teensy 4.1
-device. Note that you will have to install the Teensy board in the Arduino IDE. To do so, follow 
-these [instructions](https://www.pjrc.com/teensy/td_download.html). 
+Then, you can connect a TOP's output to each of the Luminoctopus' input channels and the colors from
+the TOP will be applied to the LEDs connected to the device. If you want a 1-to-1 correspondance, use
+a TOP with a resolution of 1px high and Npx wide, where N is the number of LEDs in your LED strip.
 
 ## Luminoctopus Outputs
 
