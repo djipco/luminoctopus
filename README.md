@@ -43,8 +43,9 @@ If it has not already been installed, you will need to install the firmware on t
 device. To do so, use the [Arduino IDE](https://www.arduino.cc/en/software/) to upload 
 `Luminoctopus.ino` to the device. 
 
-> [!NOTE] To update the formware on the Luminoctopus, you need to install the Teensy board
-> extension (if not present) in the Arduino IDE. To do so, follow these
+> [!NOTE]
+> To update the formware on the Luminoctopus, you need to install the Teensy board extension (if
+> not present) in the Arduino IDE. To do so, follow these
 > [instructions](https://www.pjrc.com/teensy/td_download.html). 
 
 #### TouchDesigner Component
