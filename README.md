@@ -181,4 +181,4 @@ synchronize their update to happen at the same time.
 |------------|-------|--------|
 |`0x00`      |`0x20` | 1 byte |
 
-This command always updates all channels.
+This command always updates all 8 channels.
