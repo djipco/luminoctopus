@@ -85,6 +85,9 @@ soldering:
 * Any Micro-USB B cable
 * Any RJ-45 Ethernet Cable (cut in two and expose the 4 internal wire pairs)
 
+The PJRC team has put together a [page](https://www.pjrc.com/store/octo28_adaptor.html) with detailed 
+assembly and wiring information.
+
 You can also 3D-print this nice case with removable cover:
 
 * coming soon...
