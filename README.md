@@ -18,7 +18,7 @@ At its core, it uses an [OctoWS2811](https://www.pjrc.com/store/octo28_adaptor.h
 
 This project allows you to reliably control a maximum of 1365 addressable RGB LEDs per channel at a 
 refresh rate of 24Hz. This yields a total of 10 920 LEDs for all 8 channels. **At a refresh rate of 
-30Hz, it supports 1101 LEDs per channel (8 808 total)**. These threshold apply to standard 800kHz 
+30Hz, it supports 1101 LEDs per channel (8 808 total)**. These thresholds apply to standard 800kHz 
 RGB LEDs. If you use 400kHz LEDs, you will get half those numbers. 
 
 The maximum number of supported LEDs depend on desired refresh rate, type of LED (RGB vs. RGBW), and
