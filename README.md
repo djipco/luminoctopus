@@ -44,7 +44,7 @@ device. To do so, use the [Arduino IDE](https://www.arduino.cc/en/software/) to 
 `Luminoctopus.ino` sketch to the device (from the `firmware/Luminoctopus/` folder).
 
 > [!NOTE]
-> To update the formware on the Luminoctopus, you need to install the Teensy board extension (if
+> To update the firmware on the Luminoctopus, you need to install the Teensy board extension (if
 > not present) in the Arduino IDE. To do so, follow these
 > [instructions](https://www.pjrc.com/teensy/td_download.html). 
 
