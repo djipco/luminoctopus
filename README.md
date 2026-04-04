@@ -17,7 +17,8 @@ At its core, it uses an [OctoWS2811](https://www.pjrc.com/store/octo28_adaptor.h
 ## How many LEDs can be controlled?
 
 This project allows you to reliably control a maximum of 1365 addressable RGB LEDs per channel at a 
-refresh rate of 24Hz. This yields a total of 10 920 LEDs for all 8 channels. **At a refresh rate of 30Hz, it supports 1101 LEDs per channel (8 808 total)**. These threshold apply to standard 800kHz 
+refresh rate of 24Hz. This yields a total of 10 920 LEDs for all 8 channels. **At a refresh rate of 
+30Hz, it supports 1101 LEDs per channel (8 808 total)**. These thresholds apply to standard 800kHz 
 RGB LEDs. If you use 400kHz LEDs, you will get half those numbers. 
 
 The maximum number of supported LEDs depend on desired refresh rate, type of LED (RGB vs. RGBW), and
@@ -36,14 +37,26 @@ the 8 channels, it must send about 44KB of data. To do this at 30Hz, it needs a 
 
 ## How can I use it?
 
+#### Firmware
+
+If it has not already been installed, you will need to install the firmware on the Luminoctopus 
+device. To do so, use the [Arduino IDE](https://www.arduino.cc/en/software/) to upload the 
+`Luminoctopus.ino` sketch to the device (from the `firmware/Luminoctopus/` folder).
+
+> [!NOTE]
+> To update the firmware on the Luminoctopus, you need to install the Teensy board extension (if
+> not present) in the Arduino IDE. To do so, follow these
+> [instructions](https://www.pjrc.com/teensy/td_download.html). 
+
+#### TouchDesigner Component
+
 As of now, the only library available is for the TouchDesigner environment. You can find the 
 `Luminoctopus.tox` file in `libraries/touchdesigner/`. To use it, simply drag and drop the `.tox` 
 file to your project and enter the appropriate settings.
 
-To install the firmware on the Luminoctopus device (if not already present), use the 
-[Arduino IDE](https://www.arduino.cc/en/software/) to upload `Luminoctopus.ino` to the Teensy 4.1
-device. Note that you will have to install the Teensy board in the Arduino IDE. To do so, follow 
-these [instructions](https://www.pjrc.com/teensy/td_download.html). 
+Then, you can connect a TOP's output to each of the Luminoctopus' input channels and the colors from
+the TOP will be applied to the LEDs connected to the device. If you want a 1-to-1 correspondance, use
+a TOP with a resolution of 1px high and Npx wide, where N is the number of LEDs in your LED strip.
 
 ## Luminoctopus Outputs
 
@@ -57,8 +70,27 @@ out the documentation for the [OctoWS2811 adapter](https://www.pjrc.com/store/oc
 | 2. Green         | 6. Green             |
 | 3. Brown         | 7. Brown             |
 
-Note that, within each of the Ethernet cable's twisted pairs, usuallt, the full-color wire is for 
+Note that, within each of the Ethernet cable's twisted pairs, usually, the full-color wire is for 
 data and the color+white wire is for ground (GND). 
+
+## Hardware
+
+If you want to build your own Luminoctopus, you will need to buy the following parts and do a bit of
+soldering:
+
+* [Teensy 4.1](https://www.digikey.ca/short/z5vbzdh8) Microcontroller
+* [OctoWS2811 Adapter](https://www.digikey.ca/short/rcqpt3h0) for Teensy 4.x
+* [Double Insulated Header Pins](https://www.digikey.ca/short/84fpr8q7)
+* [14 Pins Socket](https://www.digikey.ca/short/hmf83qpt), 2.54mm Spacing
+* Any Micro-USB B cable
+* Any RJ-45 Ethernet Cable (cut in two and expose the 4 internal wire pairs)
+
+The PJRC team has put together a [page](https://www.pjrc.com/store/octo28_adaptor.html) with detailed 
+assembly and wiring information.
+
+You can also 3D-print this nice case with removable cover:
+
+* coming soon...
 
 ## Protocol
 
@@ -168,4 +200,4 @@ synchronize their update to happen at the same time.
 |------------|-------|--------|
 |`0x00`      |`0x20` | 1 byte |
 
-This command always updates all channels.
+This command always updates all 8 channels.
