@@ -31,16 +31,16 @@ constexpr const char* LIB_NAME               = "Luminoctopus";
 constexpr const char* LIB_VERSION            = "1.0.0-alpha.5";
 
 // General constants
-constexpr uint8_t  CHANNEL_COUNT             =      8; // Number of channels available on device
 constexpr uint8_t  BROADCAST_CHANNEL         =    255; // 255 => "broadcast to all channels"
-constexpr uint16_t MAX_RGB_LEDS_PER_CHANNEL  =   1365; // Hardware limit due to DMA transfer speed
-constexpr uint16_t MAX_RGBW_LEDS_PER_CHANNEL =   1023; // Hardware limit due to DMA transfer speed
+constexpr uint8_t  BUFFER_MULTIPLIER         =      6; // Multiplier for buffer
+constexpr uint8_t  CHANNEL_COUNT             =      8; // Number of channels available on device
+constexpr uint16_t CHECKSUM_MODULO           =    256; // Modulo for checksum
 constexpr uint16_t DEFAULT_CHANNEL_COUNT     =    300; // Default number of LEDs per channel
 constexpr uint16_t MAX_PAYLOAD               =   8192; // Max payload size (in bytes)
+constexpr uint16_t MAX_RGB_LEDS_PER_CHANNEL  =   1365; // Hardware limit due to DMA transfer speed
+constexpr uint16_t MAX_RGBW_LEDS_PER_CHANNEL =   1023; // Hardware limit due to DMA transfer speed
 constexpr uint8_t  SOF_MARKER                =   0x00; // Start of frame marker
 constexpr uint16_t SYSTEM_ID                 = 0x0001; // Luminoctopus system ID (0x00 0x01)
-constexpr uint16_t CHECKSUM_MODULO           =    256; // Modulo for checksum
-constexpr uint8_t  BUFFER_MULTIPLIER         =      6; // Multiplier for buffer
 
 // Command identifier constants
 constexpr uint8_t  CMD_CONFIGURE             =   0x01;  // Configure system
