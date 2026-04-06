@@ -17,9 +17,15 @@ At its core, it uses an [OctoWS2811](https://www.pjrc.com/store/octo28_adaptor.h
 ## How many LEDs can be controlled?
 
 This project allows you to reliably control a maximum of 1365 addressable RGB LEDs per channel at a 
-refresh rate of 24Hz. This yields a total of 10 920 LEDs for all 8 channels. **At a refresh rate of 
-30Hz, it supports 1101 LEDs per channel (8 808 total)**. These thresholds apply to standard 800kHz 
+refresh rate of 24Hz. This yields a total of 10 920 LEDs for all 8 channels. At higher refresh rates, 
+the maximum number of LEDs per channel decreases. For example, at approximately **30 Hz**, the practical 
+limit is about **1 101 RGB LEDs per channel** (8 808 total). These thresholds apply to standard 800kHz 
 RGB LEDs. If you use 400kHz LEDs, you will get half those numbers. 
+
+| LED Type              | Color Components | Max LEDs per Channel | Channels | **Max Total LEDs** | **Max Refresh Rate (approx.)** |
+| --------------------- | ---------------- | -------------------- | -------- | ------------------ | ------------------------------ |
+| WS2811 / WS2812 (RGB) | 3 (R, G, B)      | **1 365**            | 8        | **10 920**         | **≈ 24 Hz**                    |
+| WS2812B‑RGBW (RGBW)   | 4 (R, G, B, W)   | **1 023**            | 8        | **8 184**          | **≈ 24 Hz**                    |
 
 The maximum number of supported LEDs depend on desired refresh rate, type of LED (RGB vs. RGBW), and
 protocol speed (400kHz vs. 800kHz). There is a **hard maximum of 1365 RGB LEDs and 1023 RGBW LEDs 
@@ -32,8 +38,10 @@ DMA transfer (32kbits) on the microcontroller.
 
 To be on the safe side, you should use USB 2.0 or more recent. Luminoctopus connects at either **USB 
 1.1 Full Speed** (12Mbits/s) or **USB 2.0 High Speed** (480Mbits/s). To update 1365 LEDs on each of 
-the 8 channels, it must send about 44KB of data. To do this at 30Hz, it needs a bandwidth of 
-1250KB/s (~10Mbps). This is below the 12Mbps limit of USB 1.1, but a little close.
+the 8 channels, it must send about 44KB of data. To do this at 30Hz, it needs a bandwidth of 1250KB/s 
+(~10Mbps). This is below the 12 Mbps limit of USB 1.1 Full Speed, but leaves little headroom. For 
+maximum reliability, USB 2.0 High Speed is strongly recommended.
+
 
 ## How can I use it?
 
@@ -78,7 +86,7 @@ data and the color+white wire is for ground (GND).
 If you want to build your own Luminoctopus, you will need to buy the following parts and do a bit of
 soldering:
 
-* [Teensy 4.1](https://www.digikey.ca/short/z5vbzdh8) Microcontroller
+* [Teensy 4.1+](https://www.digikey.ca/short/z5vbzdh8) Microcontroller (Teensy 4.0 should also work, but has not been tested)
 * [OctoWS2811 Adapter](https://www.digikey.ca/short/rcqpt3h0) for Teensy 4.x
 * [Double Insulated Header Pins](https://www.digikey.ca/short/84fpr8q7)
 * [14 Pins Socket](https://www.digikey.ca/short/hmf83qpt), 2.54mm Spacing
@@ -114,10 +122,47 @@ present. It is the modulo of `command` + `payload length` + `payload`.
 
 #### Currently Available Commands
 
+* **Get Info** (`0x00`)
 * **Configure** (`0x01`)
 * **Assign Colors** (`0x10`)
 * **Fill Color** (`0x11`)
 * **Update** (`0x20`)
+
+#### Get System Information
+
+The **Get System Information** command allows a client to query the device for its identity and 
+protocol compatibility. It is primarily used during connection establishment (handshake), but may 
+be sent at any time. The device automatically sends an `INFO` response once the serial connection 
+is established.
+
+|START MARKER|COMMAND|CHECKSUM|
+|------------|-------|--------|
+|`0x00`      |`0x00` | 1 byte |
+
+#### Response Format
+
+The device replies with a **single ASCII line**, prefixed with `INFO:` and terminated by a newline (`\n`):
+
+    INFO: DEVICE=<name> PROTOCOL=<version> FIRMWARE=<version> CHANNELS=<count> TRANSPORT=<transport>
+
+For example:
+
+    INFO: DEVICE=Luminoctopus PROTOCOL=1 FIRMWARE=1.0.0-alpha.8 CHANNELS=8 TRANSPORT=USB
+
+Clients **must ignore unknown fields** to remain forward‑compatible.
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #### Configure Device Command
 
