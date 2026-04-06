@@ -173,8 +173,8 @@ used to express this number.
 
 #### Assign Colors Command
 
-This allows to individually assigning the color of all LEDs on a channel. If the controller has been 
-configured to use 4-component colors (RGBW), you can send 4 bytes per color. Otherwise, it defaults 
+This command allows individual assignment of the color of all LEDs on a channel. If the controller has 
+been configured to use 4-component colors (RGBW), you can send 4 bytes per color. Otherwise, it defaults 
 to 3 bytes (RGB).
 
 |START MARKER|COMMAND|PAYLOAD LENGTH|PAYLOAD                                             |CHECKSUM|
@@ -183,7 +183,7 @@ to 3 bytes (RGB).
 
 #### Fill Color Command
 
-This assigns the same color to all the LEDs on a channel (or all channels, if channel 255 is 
+This assigns the same color to all the LEDs on a channel (or all channels, if channel `255` is 
 specified). It can be used to turn off the lights by sending a color of (0, 0, 0).
 
 |START MARKER|COMMAND|PAYLOAD LENGTH|PAYLOAD                               |CHECKSUM|
