@@ -83,7 +83,7 @@ data and the color+white wire is for ground (GND).
 If you want to build your own Luminoctopus, you will need to buy the following parts and do a bit of
 soldering:
 
-* [Teensy 4.1](https://www.digikey.ca/short/z5vbzdh8) Microcontroller
+* [Teensy 4.1+](https://www.digikey.ca/short/z5vbzdh8) Microcontroller (Teensy 4.0 should also work, but has not been tested)
 * [OctoWS2811 Adapter](https://www.digikey.ca/short/rcqpt3h0) for Teensy 4.x
 * [Double Insulated Header Pins](https://www.digikey.ca/short/84fpr8q7)
 * [14 Pins Socket](https://www.digikey.ca/short/hmf83qpt), 2.54mm Spacing
