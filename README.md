@@ -17,8 +17,9 @@ At its core, it uses an [OctoWS2811](https://www.pjrc.com/store/octo28_adaptor.h
 ## How many LEDs can be controlled?
 
 This project allows you to reliably control a maximum of 1365 addressable RGB LEDs per channel at a 
-refresh rate of 24Hz. This yields a total of 10 920 LEDs for all 8 channels. **At a refresh rate of 
-30Hz, it supports 1101 LEDs per channel (8 808 total)**. These thresholds apply to standard 800kHz 
+refresh rate of 24Hz. This yields a total of 10 920 LEDs for all 8 channels. At higher refresh rates, 
+the maximum number of LEDs per channel decreases. For example, at approximately **30 Hz**, the practical 
+limit is about **1 101 RGB LEDs per channel** (8 808 total). These thresholds apply to standard 800kHz 
 RGB LEDs. If you use 400kHz LEDs, you will get half those numbers. 
 
 | LED Type              | Color Components | Max LEDs per Channel | Channels | **Max Total LEDs** | **Max Refresh Rate (approx.)** |
@@ -37,8 +38,10 @@ DMA transfer (32kbits) on the microcontroller.
 
 To be on the safe side, you should use USB 2.0 or more recent. Luminoctopus connects at either **USB 
 1.1 Full Speed** (12Mbits/s) or **USB 2.0 High Speed** (480Mbits/s). To update 1365 LEDs on each of 
-the 8 channels, it must send about 44KB of data. To do this at 30Hz, it needs a bandwidth of 
-1250KB/s (~10Mbps). This is below the 12Mbps limit of USB 1.1, but a little close.
+the 8 channels, it must send about 44KB of data. To do this at 30Hz, it needs a bandwidth of 1250KB/s 
+(~10Mbps). This is below the 12 Mbps limit of USB 1.1 Full Speed, but leaves little headroom. For 
+maximum reliability, USB 2.0 High Speed is strongly recommended.
+
 
 ## How can I use it?
 
