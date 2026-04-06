@@ -28,7 +28,10 @@
 
 // Library name and version
 constexpr const char* LIB_NAME               = "Luminoctopus";
-constexpr const char* LIB_VERSION            = "1.0.0-alpha.7";
+constexpr const char* LIB_VERSION            = "1.0.0-alpha.8";
+
+// Protocol version (currently implicit, future versions may expose this via a system info command)
+constexpr uint8_t PROTOCOL_VERSION           = 1;
 
 // General constants
 constexpr uint8_t  BROADCAST_CHANNEL         =    255; // 255 => "broadcast to all channels"
@@ -43,17 +46,18 @@ constexpr uint8_t  SOF_MARKER                =   0x00; // Start of frame marker
 constexpr uint16_t SYSTEM_ID                 = 0x0001; // Luminoctopus system ID (0x00 0x01)
 
 // Command identifier constants
-constexpr uint8_t  CMD_CONFIGURE             =   0x01;  // Configure system
-constexpr uint8_t  CMD_SYSTEM_EXCLUSIVE      =   0x0A;  // Command meant for a specific system only
-constexpr uint8_t  CMD_ASSIGN_COLORS         =   0x10;  // Assign colors
-constexpr uint8_t  CMD_FILL_COLOR            =   0x11;  // Fill color
-constexpr uint8_t  CMD_UPDATE                =   0x20;  // Update display
+constexpr uint8_t CMD_GET_INFO               =   0x00;  // Get system info
+constexpr uint8_t CMD_CONFIGURE              =   0x01;  // Configure system
+constexpr uint8_t CMD_SYSTEM_EXCLUSIVE       =   0x0A;  // Command meant for a specific system only
+constexpr uint8_t CMD_ASSIGN_COLORS          =   0x10;  // Assign colors
+constexpr uint8_t CMD_FILL_COLOR             =   0x11;  // Fill color
+constexpr uint8_t CMD_UPDATE                 =   0x20;  // Update display
 
 // Map of allowed color orders using OctoWS2811's constants 
 const int colorOrderMap[] = {
   WS2811_RGB,   //  0
   WS2811_RBG,   //  1
-  WS2811_GRB,   //  2
+  WS2811_GRB,   //  2 (default)
   WS2811_GBR,   //  3
   WS2811_BRG,   //  4
   WS2811_BGR,   //  5
@@ -93,10 +97,10 @@ const char* colorOrderNames[] = {
   "RBWG", "GRWB", "GBWR", "BRWG", "BGWR"
 };
 
-// Dynamic LED count and buffer management
+// LED state
 uint8_t componentsPerPixel = 3;                       // 3 for RGB, 4 for RGBW
 bool connected = false;                               // Whether serial is connected
-uint8_t checksumData = 0;                             // Data used to calculate checksum
+uint8_t checksumState = 0;                             // Data used to calculate checksum
 uint8_t cmd = 0;                                      // Identified command
 bool frameReady = false;                              // Whether a new frame is ready to display
 bool isRGBW = false;                                  // Whether we are using 4-channel LEDs
@@ -116,9 +120,13 @@ ParseState state = ParseState::WAIT_SOF;              // Current state
 uint8_t payload[MAX_PAYLOAD];                         // Byte array for the payload
 uint16_t payloadIndex = 0;                            // Position of next byte to write in payload
 
-int* dmaBuffer = nullptr;                             // DMA buffer
-int* drawBuffer = nullptr;                            // Draw buffer
-OctoWS2811* leds = nullptr;                           // OctoWS2811
+constexpr uint16_t MAX_LEDS = MAX_RGB_LEDS_PER_CHANNEL;
+constexpr size_t MAX_BUFFER_SIZE = MAX_LEDS * BUFFER_MULTIPLIER * sizeof(int);
+
+// Buffers are statically allocated for the maximum supported LED count to guarantee deterministic 
+// behavior and avoid heap fragmentation.
+int dmaBufferStatic[MAX_BUFFER_SIZE / sizeof(int)];
+int drawBufferStatic[MAX_BUFFER_SIZE / sizeof(int)];
 
 // Debugging
 #if DEBUG
@@ -126,71 +134,29 @@ elapsedMillis timer;
 bool busy = false;
 #endif
 
-bool allocateBuffers(uint16_t ledCount) {
+// Storage for placement-new OctoWS2811 instance (properly aligned)
+alignas(OctoWS2811) static uint8_t octoStorage[sizeof(OctoWS2811)];
+OctoWS2811* leds = nullptr;
 
-  // Free existing buffers if they exist
-  if (dmaBuffer) {
-    free(dmaBuffer);
-    dmaBuffer = nullptr;
-  }
+void createOctoWS2811Instance(uint16_t ledCount, int configFlags) {
 
-  if (drawBuffer) {
-    free(drawBuffer);
-    drawBuffer = nullptr;
-  }
-  
-  // Calculate required buffer size
-  size_t bufferSize = ledCount * BUFFER_MULTIPLIER * sizeof(int);
-  
-  // Allocate new buffers
-  dmaBuffer = (int*)malloc(bufferSize);
-  drawBuffer = (int*)malloc(bufferSize);
-  
-  // Check for success of buffer allocation
-  if (!dmaBuffer || !drawBuffer) {
-    Serial.println("Error: Failed to allocate memory for LED buffers");
-    if (dmaBuffer) {
-      free(dmaBuffer);
-      dmaBuffer = nullptr;
-    }
-    if (drawBuffer) {
-      free(drawBuffer);
-      drawBuffer = nullptr;
-    }
-    return false;
-  }
-  
-  // Clear buffers and return success
-  memset(dmaBuffer, 0, bufferSize);
-  memset(drawBuffer, 0, bufferSize);
-  return true;
-
-}
-
-bool createOctoWS2811Instance(uint16_t ledCount, int configFlags) {
-
-  // Delete existing instance
+  // Destroy previous instance if it exists
   if (leds) {
-    delete leds;
+    leds->~OctoWS2811();
     leds = nullptr;
   }
   
-  // Allocate buffers for the new LED count
-  if (!allocateBuffers(ledCount)) {
-    return false;
-  }
-  
-  // Create new OctoWS2811 instance
-  leds = new OctoWS2811(ledCount, dmaBuffer, drawBuffer, configFlags);
-  
-  if (!leds) {
-    Serial.println("Error: Failed to create OctoWS2811 instance");
-    free(dmaBuffer);  dmaBuffer  = nullptr;
-    free(drawBuffer); drawBuffer = nullptr;
-    return false;
-  }
-  
-  return true;
+  // Clear buffers to avoid stale LED data after reconfiguration
+  memset(dmaBufferStatic, 0, MAX_BUFFER_SIZE);
+  memset(drawBufferStatic, 0, MAX_BUFFER_SIZE);
+
+  // Construct in preallocated storage
+  leds = new (octoStorage) OctoWS2811(
+    ledCount,
+    dmaBufferStatic,
+    drawBufferStatic,
+    configFlags
+  );
 
 }
 
@@ -201,12 +167,12 @@ void configure(
 ) {
 
   if (!isValidColorOrder(order)) {
-    Serial.println("Invalid color order");
+    sendError("INVALID_COLOR_ORDER", "COLOR_ORDER_NOT_SUPPORTED");
     return;
   }
 
   if (!isValidSpeed(speed)) {
-      Serial.println("Invalid speed setting");
+      sendError("INVALID_SPEED", "PROTOCOL_SPEED_NOT_SUPPORTED");
       return;
   }
 
@@ -214,19 +180,12 @@ void configure(
   uint16_t maxLeds = is4 ? MAX_RGBW_LEDS_PER_CHANNEL : MAX_RGB_LEDS_PER_CHANNEL;
     
   if (ledCount == 0 || ledCount > maxLeds) {
-    Serial.print("Invalid LED count: ");
-    Serial.print(ledCount);
-    Serial.print(". Must be between 1 and ");
-    Serial.print(maxLeds);
-    Serial.println(".");
+    sendError("INVALID_LED_COUNT", "LEDS_PER_CHANNEL_OUT_OF_RANGE");
     return;
   }
 
   // Create new OctoWS2811 instance with the requested configuration
-  if (!createOctoWS2811Instance(ledCount, colorOrderMap[order] | speed)) {
-    Serial.println("Failed to update configuration");
-    return;
-  }
+  createOctoWS2811Instance(ledCount, colorOrderMap[order] | speed);
 
   // Update global state
   ledsPerChannel = ledCount;
@@ -241,24 +200,23 @@ void configure(
 
 void sendConfigurationOnSerial(uint8_t order, uint8_t speed, uint16_t ledCount) {
 
-  Serial.print("Configuration: ");
-  
-  // Color order and components
-  Serial.print(colorOrderNames[order]);
-  Serial.print(", ");
+  Serial.print("CONFIG: ");
 
-  // Speed and protocol
+  Serial.print("COLOR_ORDER=");
+  Serial.print(colorOrderNames[order]);
+
+  Serial.print(" SPEED=");
   switch (speed) {
-    case WS2811_800kHz: Serial.print("800kHz, WS2811"); break;
-    case WS2811_400kHz: Serial.print("400kHz, WS2811"); break;
-    case WS2813_800kHz: Serial.print("800kHz, WS2813"); break;
-    default:            Serial.print("Unknown");        break;
+    case WS2811_800kHz: Serial.print("800kHz"); break;
+    case WS2811_400kHz: Serial.print("400kHz"); break;
+    case WS2813_800kHz: Serial.print("800kHz_WS2813"); break;
+    default:            Serial.print("UNKNOWN"); break;
   }
 
-  // Number of LEDs
-  Serial.print(", ");
+  Serial.print(" LEDS_PER_CHANNEL=");
   Serial.print(ledCount);
-  Serial.println(" LEDs/ch");
+
+  Serial.println();
 
 }
 
@@ -268,11 +226,7 @@ void setup() {
   // used is always the full native USB speed (either 12 or 480 Mbit/sec). So, there is no need to 
   // call Serial.begin(). Details: https://www.pjrc.com/teensy/td_serial.html
 
-  // Initialize OctoWS2811 with default configuration
-  if (!createOctoWS2811Instance(DEFAULT_CHANNEL_COUNT, WS2811_GRB | WS2811_800kHz)) {
-    Serial.println("Failed to initialize LED system");
-    while(1); // Halt execution
-  }
+  createOctoWS2811Instance(DEFAULT_CHANNEL_COUNT, WS2811_GRB | WS2811_800kHz);
 
 }
 
@@ -284,10 +238,11 @@ void loop() {
     if (!connected) {
       connected = true;
       configure();
-      Serial.print("Connected to ");
-      Serial.print(LIB_NAME);
-      Serial.print(" v");
-      Serial.println(LIB_VERSION);
+      // Serial.print("Connected to ");
+      // Serial.print(LIB_NAME);
+      // Serial.print(" v");
+      // Serial.println(LIB_VERSION);
+      handleGetInfoCommand();
     } 
   } else {
 
@@ -346,10 +301,10 @@ void readSerialByte(uint8_t b) {
     case ParseState::READ_CMD:
 
       cmd = b;
-      checksumData = b;
+      checksumState = b;
 
       // For zero-payload commands, we jump ahead to READ_CHK.
-      if (cmd == CMD_UPDATE) {
+      if (cmd == CMD_UPDATE || cmd == CMD_GET_INFO) {
         len = 0;
         state = ParseState::READ_CHK;
       } else {
@@ -361,19 +316,18 @@ void readSerialByte(uint8_t b) {
     // Get first byte of payload length
     case ParseState::READ_LEN1:
       len = b;
-      checksumData += b;
+      checksumState += b;
       state = ParseState::READ_LEN2;
       break;
       
     // Get second byte of payload length, and compute final length
     case ParseState::READ_LEN2:
       len |= (b << 8);
-      checksumData += b;
+      checksumState += b;
       if (len > MAX_PAYLOAD) {
         state = ParseState::WAIT_SOF;
-        Serial.print("Stated payload size is too big: ");
-        Serial.print(len);
-        Serial.println(" bytes");
+        checksumState = 0;
+        sendError("PAYLOAD_TOO_LARGE", "MAX_PAYLOAD_EXCEEDED");
       } else {
         payloadIndex = 0;
         state = ParseState::READ_DATA;
@@ -383,19 +337,16 @@ void readSerialByte(uint8_t b) {
     // Read full payload
     case ParseState::READ_DATA:
       payload[payloadIndex++] = b;
-      checksumData += b;
+      checksumState += b;
       if (payloadIndex >= len) state = ParseState::READ_CHK;
       break;
       
     // Verify checksum
     case ParseState::READ_CHK:
-      if (checksumData % CHECKSUM_MODULO == b) {
+      if (checksumState % CHECKSUM_MODULO == b) {
         processCommand();
       } else {
-        Serial.print("Checksum mismatch. Expected: ");
-        Serial.print(checksumData % CHECKSUM_MODULO);
-        Serial.print(", Received: ");
-        Serial.println(b);
+        sendError("CHECKSUM_MISMATCH", "CHECKSUM_VERIFICATION_FAILED");
       }
       state = ParseState::WAIT_SOF;
       break;
@@ -407,26 +358,55 @@ void readSerialByte(uint8_t b) {
 void processCommand() {
 
     switch (cmd) {
+      
+      case CMD_GET_INFO:      handleGetInfoCommand();      break;
+
       case CMD_CONFIGURE:     handleConfigureCommand();    break;
       case CMD_ASSIGN_COLORS: handleAssignColorsCommand(); break;
       case CMD_FILL_COLOR:    handleFillColorCommand();    break;
       case CMD_UPDATE:        handleUpdateCommand();       break;
       default:
-        Serial.print("Invalid command. Cmd: 0x");
-        Serial.print(cmd, HEX);
-        Serial.print(", Payload length: ");
-        Serial.println(len);
+        sendError("INVALID_COMMAND", "COMMAND_NOT_SUPPORTED");
         break;
     }
 
 }
+
+void handleGetInfoCommand() {
+
+  Serial.print("INFO: ");
+
+  Serial.print("DEVICE=");
+  Serial.print(LIB_NAME);
+
+  Serial.print(" PROTOCOL=");
+  Serial.print(PROTOCOL_VERSION);
+
+  Serial.print(" FIRMWARE=");
+  Serial.print(LIB_VERSION);
+
+  Serial.print(" CHANNELS=");
+  Serial.print(CHANNEL_COUNT);
+
+  Serial.println(" TRANSPORT=USB");
+
+}
+
+
+void sendError(const char* code, const char* message) {
+  Serial.print("ERROR: CODE=");
+  Serial.print(code);
+  Serial.print(" MESSAGE=");
+  Serial.println(message);
+}
+
 
 void handleConfigureCommand() {
 
   // We leave for the possibility of a larger length to allow future extensions in the configuration
   // options.
   if (len < 4) {
-    Serial.println("Invalid configuration payload length.");
+    sendError("INVALID_CONFIGURATION", "PAYLOAD_TOO_SHORT");
     return;
   }
   
@@ -451,32 +431,20 @@ void handleConfigureCommand() {
   }
   
   if (!validColor) {
-    Serial.print("Invalid color order code: ");
-    Serial.println(colorOrder);
+    sendError("INVALID_COLOR_ORDER", "COLOR_ORDER_NOT_SUPPORTED");
   }
 
   if (!validSpeed) {
-    Serial.print("Invalid speed flag: 0x");
-    Serial.println(speed, HEX);
+    sendError("INVALID_SPEED", "PROTOCOL_SPEED_NOT_SUPPORTED");
   }
 
   if (!validLedCount) {
-    Serial.print("Invalid LED count: ");
-    Serial.print(count);
-    Serial.print(". Must be between 1 and ");
-    if (validColor && colorOrderMap[colorOrder] >= WS2811_RGBW) {
-      Serial.print(MAX_RGBW_LEDS_PER_CHANNEL);
-    } else {
-      Serial.print(MAX_RGB_LEDS_PER_CHANNEL);
-    }
-    Serial.println(".");
+    sendError("INVALID_LED_COUNT", "LEDS_PER_CHANNEL_OUT_OF_RANGE");
   }
   
   if (validColor && validSpeed && validLedCount) {
     configure(colorOrder, speed, count);
     sendConfigurationOnSerial(colorOrder, speed, count);
-  } else {
-    Serial.println("Configuration rejected.");
   }
 
 }
@@ -484,21 +452,20 @@ void handleConfigureCommand() {
 void handleAssignColorsCommand() {
 
   if (!leds) {
-    Serial.println("Error: system not initialized");
+    sendError("SYSTEM_NOT_INITIALIZED", "LED_SYSTEM_NOT_READY");
     return;
   }
 
   // Check payload format (RGB or RGBW)
   if ((len - 1) % componentsPerPixel != 0) {
-    Serial.println("Invalid color assignment payload.");
+    sendError("INVALID_PAYLOAD", "COLOR_COMPONENT_MISMATCH");
     return;
   }
   
   // First byte of payload is channel
   uint8_t ch = payload[0];
   if (ch >= CHANNEL_COUNT) {
-    Serial.print("Invalid channel: ");
-    Serial.println(ch);
+    sendError("INVALID_CHANNEL", "CHANNEL_INDEX_OUT_OF_RANGE");
     return;
   }
   
@@ -508,7 +475,7 @@ void handleAssignColorsCommand() {
   // Check if we're trying to write beyond the allocated LEDs
   if (ledsInPayload > ledsPerChannel) {
     #if DEBUG
-    Serial.println("Payload is too large. Ignoring.");
+    Serial.println("DEBUG: PAYLOAD_TOO_LARGE_IGNORED");
     #endif
     return;
   }
@@ -535,12 +502,12 @@ void handleAssignColorsCommand() {
 void handleFillColorCommand() {
 
   if (!leds) {
-    Serial.println("Error: system not initialized");
+    sendError("SYSTEM_NOT_INITIALIZED", "LED_SYSTEM_NOT_READY");
     return;
   }
   
   if (len < (isRGBW ? 5 : 4)) {
-    Serial.println("Invalid fill color payload.");
+    sendError("INVALID_PAYLOAD", "FILL_COLOR_PAYLOAD_TOO_SHORT");
     return;
   }
   
@@ -548,8 +515,7 @@ void handleFillColorCommand() {
   uint8_t ch = payload[0];
 
   if (!isValidChannel(ch)) {
-    Serial.print("Invalid channel: ");
-    Serial.println(ch);
+    sendError("INVALID_CHANNEL", "CHANNEL_INDEX_OUT_OF_RANGE");
     return;
   }
 
@@ -587,7 +553,7 @@ void handleFillColorCommand() {
 void handleUpdateCommand() {
   
   if (!leds) {
-    Serial.println("Error: LED system not initialized");
+    sendError("SYSTEM_NOT_INITIALIZED", "LED_SYSTEM_NOT_READY");
     return;
   }
 
@@ -611,5 +577,5 @@ void resetParser() {
   state = ParseState::WAIT_SOF;
   payloadIndex = 0;
   len = 0;
-  checksumData = 0;
+  checksumState = 0;
 }
