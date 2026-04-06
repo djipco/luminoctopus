@@ -122,10 +122,47 @@ present. It is the modulo of `command` + `payload length` + `payload`.
 
 #### Currently Available Commands
 
+* **Get Info** (`0x00`)
 * **Configure** (`0x01`)
 * **Assign Colors** (`0x10`)
 * **Fill Color** (`0x11`)
 * **Update** (`0x20`)
+
+#### Get System Information
+
+The **Get System Information** command allows a client to query the device for its identity and 
+protocol compatibility. It is primarily used during connection establishment (handshake), but may 
+be sent at any time. The device automatically sends an `INFO` response once the serial connection 
+is established.
+
+|START MARKER|COMMAND|CHECKSUM|
+|------------|-------|--------|
+|`0x00`      |`0x00` | 1 byte |
+
+#### Response Format
+
+The device replies with a **single ASCII line**, prefixed with `INFO:` and terminated by a newline (`\n`):
+
+    INFO: DEVICE=<name> PROTOCOL=<version> FIRMWARE=<version> CHANNELS=<count> TRANSPORT=<transport>
+
+For example:
+
+    INFO: DEVICE=Luminoctopus PROTOCOL=1 FIRMWARE=1.0.0-alpha.8 CHANNELS=8 TRANSPORT=USB
+
+Clients **must ignore unknown fields** to remain forward‑compatible.
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #### Configure Device Command
 
