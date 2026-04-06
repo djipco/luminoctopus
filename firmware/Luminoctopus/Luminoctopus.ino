@@ -2,7 +2,7 @@
   ==================================================================================================
    
    LUMINOCTOPUS
-   © 2025, Jean-Philippe Côté (djip.co)
+   © 2025-2026, Jean-Philippe Côté (djip.co)
 
    GNU General Public License v3.0
 
@@ -28,7 +28,7 @@
 
 // Library name and version
 constexpr const char* LIB_NAME               = "Luminoctopus";
-constexpr const char* LIB_VERSION            = "1.0.0-alpha.5";
+constexpr const char* LIB_VERSION            = "1.0.0-alpha.7";
 
 // General constants
 constexpr uint8_t  BROADCAST_CHANNEL         =    255; // 255 => "broadcast to all channels"
@@ -185,6 +185,8 @@ bool createOctoWS2811Instance(uint16_t ledCount, int configFlags) {
   
   if (!leds) {
     Serial.println("Error: Failed to create OctoWS2811 instance");
+    free(dmaBuffer);  dmaBuffer  = nullptr;
+    free(drawBuffer); drawBuffer = nullptr;
     return false;
   }
   
@@ -193,7 +195,7 @@ bool createOctoWS2811Instance(uint16_t ledCount, int configFlags) {
 }
 
 void configure(
-  uint8_t order = WS2811_GRB, 
+  uint8_t order = 2,
   uint8_t speed = WS2811_800kHz, 
   uint16_t ledCount = DEFAULT_CHANNEL_COUNT
 ) {
@@ -242,15 +244,7 @@ void sendConfigurationOnSerial(uint8_t order, uint8_t speed, uint16_t ledCount) 
   Serial.print("Configuration: ");
   
   // Color order and components
-  const char* colorOrderName = "Unknown";
-
-  for (int i = 0; i < COLOR_ORDER_COUNT; i++) {
-    if (colorOrderMap[i] == order) {
-      colorOrderName = colorOrderNames[i];
-      break;
-    }
-  }
-  Serial.print(colorOrderName);
+  Serial.print(colorOrderNames[order]);
   Serial.print(", ");
 
   // Speed and protocol
@@ -296,9 +290,15 @@ void loop() {
       Serial.println(LIB_VERSION);
     } 
   } else {
-    if (connected) connected = false;
+
+    if (connected) {
+      connected = false;
+      resetParser();
+      frameReady = false;
+    }
     delay(20); 
     return;
+
   }
   
   // Read incoming serial data (if any)
@@ -406,29 +406,19 @@ void readSerialByte(uint8_t b) {
 
 void processCommand() {
 
-  // CMD_CONFIGURE
-  if (cmd == CMD_CONFIGURE) {
-    handleConfigureCommand();
-  
-  // CMD_ASSIGN_COLORS
-  } else if (cmd == CMD_ASSIGN_COLORS) {
-    handleAssignColorsCommand();
-    
-  // CMD_FILL_COLOR
-  } else if (cmd == CMD_FILL_COLOR) {
-    handleFillColorCommand();
-    
-  // CMD_UPDATE
-  } else if (cmd == CMD_UPDATE) {
-    handleUpdateCommand();
-    
-  // Invalid command syntax
-  } else {
-    Serial.print("Invalid command. Cmd: 0x");
-    Serial.print(cmd, HEX);
-    Serial.print(", Payload length: ");
-    Serial.println(len);
-  }
+    switch (cmd) {
+      case CMD_CONFIGURE:     handleConfigureCommand();    break;
+      case CMD_ASSIGN_COLORS: handleAssignColorsCommand(); break;
+      case CMD_FILL_COLOR:    handleFillColorCommand();    break;
+      case CMD_UPDATE:        handleUpdateCommand();       break;
+      default:
+        Serial.print("Invalid command. Cmd: 0x");
+        Serial.print(cmd, HEX);
+        Serial.print(", Payload length: ");
+        Serial.println(len);
+        break;
+    }
+
 }
 
 void handleConfigureCommand() {
@@ -484,7 +474,7 @@ void handleConfigureCommand() {
   
   if (validColor && validSpeed && validLedCount) {
     configure(colorOrder, speed, count);
-    sendConfigurationOnSerial(colorOrderMap[colorOrder], speed, count);
+    sendConfigurationOnSerial(colorOrder, speed, count);
   } else {
     Serial.println("Configuration rejected.");
   }
@@ -615,4 +605,11 @@ bool isValidColorOrder(uint8_t order) {
 
 bool isValidSpeed(uint8_t speed) {
   return speed == WS2811_800kHz || speed == WS2811_400kHz || speed == WS2813_800kHz;
+}
+
+void resetParser() {
+  state = ParseState::WAIT_SOF;
+  payloadIndex = 0;
+  len = 0;
+  checksumData = 0;
 }
