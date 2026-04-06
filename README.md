@@ -21,6 +21,11 @@ refresh rate of 24Hz. This yields a total of 10 920 LEDs for all 8 channels. **A
 30Hz, it supports 1101 LEDs per channel (8 808 total)**. These thresholds apply to standard 800kHz 
 RGB LEDs. If you use 400kHz LEDs, you will get half those numbers. 
 
+| LED Type              | Color Components | Max LEDs per Channel | Channels | **Max Total LEDs** | **Max Refresh Rate (approx.)** |
+| --------------------- | ---------------- | -------------------- | -------- | ------------------ | ------------------------------ |
+| WS2811 / WS2812 (RGB) | 3 (R, G, B)      | **1 365**            | 8        | **10 920**         | **≈ 24 Hz**                    |
+| WS2812B‑RGBW (RGBW)   | 4 (R, G, B, W)   | **1 023**            | 8        | **8 184**          | **≈ 24 Hz**                    |
+
 The maximum number of supported LEDs depend on desired refresh rate, type of LED (RGB vs. RGBW), and
 protocol speed (400kHz vs. 800kHz). There is a **hard maximum of 1365 RGB LEDs and 1023 RGBW LEDs 
 per channel** (no matter the refresh rate). This is due to limits imposed by the size of a single 
