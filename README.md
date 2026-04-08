@@ -11,21 +11,21 @@ At its core, it uses an [OctoWS2811](https://www.pjrc.com/store/octo28_adaptor.h
 [Teensy 4.1](https://www.pjrc.com/store/teensy41.html) board. 
 
 > [!CAUTION]  
-> _This is alpha software and might not be production ready. I'm having good success with it but your
-> mileage may vary. Report issues if you find any. Cheers!_
+> _This is alpha software and might not be production ready. I'm having good success with it but 
+> your mileage may vary. Report issues if you find any. Cheers!_
 
 ## How many LEDs can be controlled?
 
 This project allows you to reliably control a maximum of 1365 addressable RGB LEDs per channel at a 
 refresh rate of 24Hz. This yields a total of 10 920 LEDs for all 8 channels. At higher refresh rates, 
-the maximum number of LEDs per channel decreases. For example, at approximately **30 Hz**, the practical 
-limit is about **1 101 RGB LEDs per channel** (8 808 total). These thresholds apply to standard 800kHz 
-RGB LEDs. If you use 400kHz LEDs, you will get half those numbers. 
+the maximum number of LEDs per channel decreases. For example, at approximately **30 Hz**, the 
+practical limit is about **1 101 RGB LEDs per channel** (8 808 total). These thresholds apply to 
+standard 800kHz RGB LEDs. If you use 400kHz LEDs, you will get half those numbers. 
 
 | LED Type              | Color Components | Max LEDs per Channel | Channels | **Max Total LEDs** | **Max Refresh Rate (approx.)** |
 | --------------------- | ---------------- | -------------------- | -------- | ------------------ | ------------------------------ |
-| WS2811 / WS2812 (RGB) | 3 (R, G, B)      | **1 365**            | 8        | **10 920**         | **≈ 24 Hz**                    |
-| WS2812B‑RGBW (RGBW)   | 4 (R, G, B, W)   | **1 023**            | 8        | **8 184**          | **≈ 24 Hz**                    |
+| WS2811 / WS2812 (RGB) | 3 (R, G, B)      | **1 365**            | 8        | **10 920**         | **≈ 24 Hz**                    |
+| WS2812B‑RGBW (RGBW)   | 4 (R, G, B, W)   | **1 023**            | 8        | **8 184**          | **≈ 24 Hz**                    |
 
 The maximum number of supported LEDs depend on desired refresh rate, type of LED (RGB vs. RGBW), and
 protocol speed (400kHz vs. 800kHz). There is a **hard maximum of 1365 RGB LEDs and 1023 RGBW LEDs 
@@ -38,9 +38,9 @@ DMA transfer (32kbits) on the microcontroller.
 
 To be on the safe side, you should use USB 2.0 or more recent. Luminoctopus connects at either **USB 
 1.1 Full Speed** (12Mbits/s) or **USB 2.0 High Speed** (480Mbits/s). To update 1365 LEDs on each of 
-the 8 channels, it must send about 44KB of data. To do this at 30Hz, it needs a bandwidth of 1250KB/s 
-(~10Mbps). This is below the 12 Mbps limit of USB 1.1 Full Speed, but leaves little headroom. For 
-maximum reliability, USB 2.0 High Speed is strongly recommended.
+the 8 channels, it must send about 44KB of data. To do this at 30Hz, it needs a bandwidth of 
+1250KB/s (~10Mbps). This is below the 12 Mbps limit of USB 1.1 Full Speed, but leaves little 
+headroom. For maximum reliability, USB 2.0 High Speed is strongly recommended.
 
 
 ## How can I use it?
@@ -52,8 +52,8 @@ device. To do so, use the [Arduino IDE](https://www.arduino.cc/en/software/) to 
 `Luminoctopus.ino` sketch to the device (from the `firmware/Luminoctopus/` folder).
 
 > [!NOTE]
-> To update the firmware on the Luminoctopus, you need to install the Teensy board extension (if
-> not present) in the Arduino IDE. To do so, follow these
+> To update the firmware on the Luminoctopus, you need to install the Teensy board extension (if not
+> present) in the Arduino IDE. To do so, follow these
 > [instructions](https://www.pjrc.com/teensy/td_download.html). 
 
 #### TouchDesigner Component
@@ -63,8 +63,9 @@ As of now, the only library available is for the TouchDesigner environment. You 
 file to your project and enter the appropriate settings.
 
 Then, you can connect a TOP's output to each of the Luminoctopus' input channels and the colors from
-the TOP will be applied to the LEDs connected to the device. If you want a 1-to-1 correspondance, use
-a TOP with a resolution of 1px high and Npx wide, where N is the number of LEDs in your LED strip.
+the TOP will be applied to the LEDs connected to the device. If you want a 1-to-1 correspondance, 
+use a TOP with a resolution of 1px high and Npx wide, where N is the number of LEDs in your LED 
+strip.
 
 ## Luminoctopus Outputs
 
@@ -93,8 +94,8 @@ soldering:
 * Any Micro-USB B cable
 * Any RJ-45 Ethernet Cable (cut in two and expose the 4 internal wire pairs)
 
-The PJRC team has put together a [page](https://www.pjrc.com/store/octo28_adaptor.html) with detailed 
-assembly and wiring information.
+The PJRC team has put together a [page](https://www.pjrc.com/store/octo28_adaptor.html) with 
+detailed assembly and wiring information.
 
 You can also 3D-print this nice case with removable cover:
 
@@ -110,23 +111,26 @@ native protocol.
 > point. However, if you want to use or understand the protocol itself, you will find some info 
 > below._
 
-#### General Messsage Format
+#### General Message Format
 
 This is the general message format. **Length** identifies the length of the payload. For commands 
-that do not have a payload (such as **Update**), the length is omitted. The checksum is always 
-present. It is the modulo of `command` + `payload length` + `payload`.
+that do not have a payload (such as **Update**), the length is omitted. The checksum is always
+present and occupies **2 bytes** (little-endian). Currently, it is computed as the modulo-256 of
+`command` + `payload length` + `payload`, stored in the low byte (the high byte is reserved for a
+future CRC-16 upgrade).
 
-|START MARKER          |COMMAND                         |PAYLOAD LENGTH                               |PAYLOAD                                              |CHECKSUM                        |
-|----------------------|--------------------------------|---------------------------------------------|-----------------------------------------------------|--------------------------------|
-|**1 byte**<br>(`0x00`)|**1 byte**<br>(`0x01` to `0xFF`)|**2 bytes**<br>(omitted for certain commands)|**variable length**<br>(omitted for certain commands)|**1 byte**<br>(`0x01` to `0xFF`)|
+|START MARKER          |COMMAND                         |PAYLOAD LENGTH                               |PAYLOAD                                              |CHECKSUM                           |
+|----------------------|--------------------------------|---------------------------------------------|-----------------------------------------------------|-----------------------------------|
+|**1 byte**<br>(`0x00`)|**1 byte**<br>(`0x01` to `0xFF`)|**2 bytes**<br>(omitted for certain commands)|**variable length**<br>(omitted for certain commands)|**2 bytes**<br>(`LSB` + `0x00`)    |
 
 #### Currently Available Commands
 
-* **Get Info** (`0x00`)
-* **Configure** (`0x01`)
-* **Assign Colors** (`0x10`)
-* **Fill Color** (`0x11`)
-* **Update** (`0x20`)
+* **Get Info** (`0x01`)
+* **Get Config** (`0x02`)
+* **Configure** (`0x20`)
+* **Assign Colors** (`0x40`)
+* **Fill Color** (`0x41`)
+* **Update** (`0x60`)
 
 #### Get System Information
 
@@ -135,34 +139,39 @@ protocol compatibility. It is primarily used during connection establishment (ha
 be sent at any time. The device automatically sends an `INFO` response once the serial connection 
 is established.
 
-|START MARKER|COMMAND|CHECKSUM|
-|------------|-------|--------|
-|`0x00`      |`0x00` | 1 byte |
+|START MARKER|COMMAND|CHECKSUM |
+|------------|-------|---------|
+|`0x00`      |`0x01` | 2 bytes |
 
 #### Response Format
 
-The device replies with a **single ASCII line**, prefixed with `INFO:` and terminated by a newline (`\n`):
+The device replies with a **single ASCII line**, prefixed with `INFO:` and terminated by a newline
+(`\n`):
 
     INFO: DEVICE=<name> PROTOCOL=<version> FIRMWARE=<version> CHANNELS=<count> TRANSPORT=<transport>
 
 For example:
 
-    INFO: DEVICE=Luminoctopus PROTOCOL=1 FIRMWARE=1.0.0-alpha.8 CHANNELS=8 TRANSPORT=USB
+    INFO: DEVICE=Luminoctopus PROTOCOL=1 FIRMWARE=1.0.0-alpha.9 CHANNELS=8 TRANSPORT=USB
 
 Clients **must ignore unknown fields** to remain forward‑compatible.
 
+#### Get Configuration
 
+The **Get Configuration** command allows a client to query the device's current configuration.
 
+|START MARKER|COMMAND|CHECKSUM |
+|------------|-------|---------|
+|`0x00`      |`0x02` | 2 bytes |
 
+The device replies with a **single ASCII line**, prefixed with `CONFIG:` and terminated by a newline
+(`\n`):
 
+    CONFIG: COLOR_ORDER=<order> SPEED=<speed> LEDS_PER_CHANNEL=<count>
 
+For example:
 
-
-
-
-
-
-
+    CONFIG: COLOR_ORDER=GRB SPEED=800kHz LEDS_PER_CHANNEL=300
 
 #### Configure Device Command
 
@@ -170,9 +179,9 @@ This is usually the first command sent since it allows to specify the type of LE
 control, the protocol speed and the number of LEDs per channel. If this command is not sent, the 
 device is configured by default to use 300 LEDs per channel, using GRB order, and a speed of 800kHz.
 
-|START MARKER|COMMAND|PAYLOAD LENGTH|COLOR ORDER|SPEED   |LEDS PER CHANNEL|CHECKSUM|
-|------------|-------|--------------|-----------|--------|----------------|--------|
-|`0x00`      |`0x01` |`0x00` `0x04` |  1 byte   | 1 byte |    2 bytes     | 1 byte |
+|START MARKER|COMMAND|PAYLOAD LENGTH|COLOR ORDER|SPEED   |LEDS PER CHANNEL|CHECKSUM |
+|------------|-------|--------------|-----------|--------|----------------|---------|
+|`0x00`      |`0x20` |`0x00` `0x04` |  1 byte   | 1 byte |    2 bytes     | 2 bytes |
 
 Available color orders are:
 
@@ -209,31 +218,31 @@ Available color orders are:
 
 Available speeds are: 
 
-  * WS2811_800kHz =  0 (`0x00`)
-  * WS2811_400kHz = 64 (`0x40`)
-  * WS2813_800kHz = 80 (`0x80`)
+  * WS2811_800kHz =   0 (`0x00`)
+  * WS2811_400kHz =  64 (`0x40`)
+  * WS2813_800kHz = 128 (`0x80`)
 
 The number of LEDs per channel must be 1365 or less for RGB and 1023 or less for RGBW. Two bytes are
 used to express this number.
 
 #### Assign Colors Command
 
-This command allows individual assignment of the color of all LEDs on a channel. If the controller has 
-been configured to use 4-component colors (RGBW), you can send 4 bytes per color. Otherwise, it defaults 
-to 3 bytes (RGB).
+This command allows individual assignment of the color of all LEDs on a channel. If the controller 
+has been configured to use 4-component colors (RGBW), you can send 4 bytes per color. Otherwise, it 
+defaults to 3 bytes (RGB).
 
-|START MARKER|COMMAND|PAYLOAD LENGTH|PAYLOAD                                             |CHECKSUM|
-|------------|-------|--------------|----------------------------------------------------|--------|
-|`0x00`      |`0x10` | 2 bytes      |Channel number + 3 (or 4) bytes for each LED's color| 1 byte |
+|START MARKER|COMMAND|PAYLOAD LENGTH|PAYLOAD                                             |CHECKSUM |
+|------------|-------|--------------|----------------------------------------------------|---------|
+|`0x00`      |`0x40` | 2 bytes      |Channel number + 3 (or 4) bytes for each LED's color| 2 bytes |
 
 #### Fill Color Command
 
 This assigns the same color to all the LEDs on a channel (or all channels, if channel `255` is 
 specified). It can be used to turn off the lights by sending a color of (0, 0, 0).
 
-|START MARKER|COMMAND|PAYLOAD LENGTH|PAYLOAD                               |CHECKSUM|
-|------------|-------|--------------|---------------------------------------|--------|
-|`0x00`      |`0x11` | 2 bytes      |Channel number + R + G + B (or R+G+B+W)| 1 byte |
+|START MARKER|COMMAND|PAYLOAD LENGTH|PAYLOAD                                |CHECKSUM |
+|------------|-------|--------------|---------------------------------------|---------|
+|`0x00`      |`0x41` | 2 bytes      |Channel number + R + G + B (or R+G+B+W)| 2 bytes |
 
 #### Update Command
 
@@ -241,8 +250,8 @@ After assigning colors with **Assign** or **Fill**, you must send the **Update**
 the actual update of the LEDs. This allows you to prepare more than one channel beforehand and 
 synchronize their update to happen at the same time.
 
-|START MARKER|COMMAND|CHECKSUM|
-|------------|-------|--------|
-|`0x00`      |`0x20` | 1 byte |
+|START MARKER|COMMAND|CHECKSUM |
+|------------|-------|---------|
+|`0x00`      |`0x60` | 2 bytes |
 
 This command always updates all 8 channels.
