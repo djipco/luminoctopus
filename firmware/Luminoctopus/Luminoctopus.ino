@@ -27,31 +27,48 @@
 #define DEBUG 0
 
 // Library name and version
-constexpr const char* LIB_NAME               = "Luminoctopus";
-constexpr const char* LIB_VERSION            = "1.0.0-alpha.8";
+constexpr const char* LIB_NAME                  = "Luminoctopus";
+constexpr const char* LIB_VERSION               = "1.0.0-alpha.9";
 
-// Protocol version (currently implicit, future versions may expose this via a system info command)
-constexpr uint8_t PROTOCOL_VERSION           = 1;
+// Protocol version
+constexpr uint8_t PROTOCOL_VERSION              = 1;
 
 // General constants
-constexpr uint8_t  BROADCAST_CHANNEL         =    255; // 255 => "broadcast to all channels"
-constexpr uint8_t  BUFFER_MULTIPLIER         =      6; // Multiplier for buffer
-constexpr uint8_t  CHANNEL_COUNT             =      8; // Number of channels available on device
-constexpr uint16_t CHECKSUM_MODULO           =    256; // Modulo for checksum
-constexpr uint16_t DEFAULT_CHANNEL_COUNT     =    300; // Default number of LEDs per channel
-constexpr uint16_t MAX_PAYLOAD               =   8192; // Max payload size (in bytes)
-constexpr uint16_t MAX_RGB_LEDS_PER_CHANNEL  =   1365; // Hardware limit due to DMA transfer speed
-constexpr uint16_t MAX_RGBW_LEDS_PER_CHANNEL =   1023; // Hardware limit due to DMA transfer speed
-constexpr uint8_t  SOF_MARKER                =   0x00; // Start of frame marker
-constexpr uint16_t SYSTEM_ID                 = 0x0001; // Luminoctopus system ID (0x00 0x01)
+constexpr uint8_t  BROADCAST_CHANNEL            =    255; // 255 => "broadcast to all channels"
+constexpr uint8_t  BUFFER_MULTIPLIER            =      6; // Multiplier for buffer
+constexpr uint8_t  CHANNEL_COUNT                =      8; // Number of channels available on device
+constexpr uint16_t CHECKSUM_MODULO              =    256; // Modulo for checksum
+constexpr uint16_t DEFAULT_CHANNEL_COUNT        =    300; // Default number of LEDs per channel
+constexpr uint16_t MAX_PAYLOAD                  =   8192; // Max payload size (in bytes)
+constexpr uint16_t MAX_RGB_LEDS_PER_CHANNEL     =   1365; // Hardware limit due to DMA transfer speed
+constexpr uint16_t MAX_RGBW_LEDS_PER_CHANNEL    =   1023; // Hardware limit due to DMA transfer speed
+constexpr uint8_t  SOF_MARKER                   =   0x00; // Start of frame marker
+constexpr uint16_t SYSTEM_ID                    = 0x0001; // Luminoctopus system ID (0x00 0x01)
 
-// Command identifier constants
-constexpr uint8_t CMD_GET_INFO               =   0x00;  // Get system info
-constexpr uint8_t CMD_CONFIGURE              =   0x01;  // Configure system
-constexpr uint8_t CMD_SYSTEM_EXCLUSIVE       =   0x0A;  // Command meant for a specific system only
-constexpr uint8_t CMD_ASSIGN_COLORS          =   0x10;  // Assign colors
-constexpr uint8_t CMD_FILL_COLOR             =   0x11;  // Fill color
-constexpr uint8_t CMD_UPDATE                 =   0x20;  // Update display
+// Commands (0x00 is reserved for SOF)
+constexpr uint8_t CMD_GET_INFO                  = 0x01; // Query commands (0x01–0x1F)
+constexpr uint8_t CMD_GET_CONFIG                = 0x02;
+constexpr uint8_t CMD_CONFIGURE                 = 0x20; // Configuration commands (0x20–0x3F)
+constexpr uint8_t CMD_ASSIGN_COLORS             = 0x40; // LED data commands (0x40–0x5F)
+constexpr uint8_t CMD_FILL_COLOR                = 0x41;
+constexpr uint8_t CMD_UPDATE                    = 0x60; // Control commands (0x60–0x7F)
+// 0x80–0x9F (reserverd)
+// 0xA0–0xBF (reserverd)
+// 0xC0–0xDF (reserverd)
+constexpr uint8_t CMD_SYSTEM_EXCLUSIVE          = 0xE0; // System-exclusive commands (0xE0–0xFF)
+
+// Error codes
+constexpr uint8_t ERR_UNKNOWN_COMMAND           = 0x01; // Query errors (0x01–0x1F)
+constexpr uint8_t ERR_PAYLOAD_TOO_SHORT         = 0x20; // Configuration errors (0x20–0x3F)
+constexpr uint8_t ERR_INVALID_COLOR_ORDER       = 0x21;
+constexpr uint8_t ERR_INVALID_SPEED             = 0x22;
+constexpr uint8_t ERR_INVALID_LED_COUNT         = 0x23;
+constexpr uint8_t ERR_INVALID_CHANNEL           = 0x40; // LED data errors (0x40–0x5F)
+constexpr uint8_t ERR_COLOR_COMPONENT_MISMATCH  = 0x41;
+constexpr uint8_t ERR_SYSTEM_NOT_INITIALIZED    = 0xE0; // System errors (0xE0–0xFF)
+constexpr uint8_t ERR_PAYLOAD_TOO_LARGE         = 0xE1;
+constexpr uint8_t ERR_CHECKSUM_MISMATCH         = 0xE2;
+
 
 // Map of allowed color orders using OctoWS2811's constants 
 const int colorOrderMap[] = {
@@ -97,15 +114,19 @@ const char* colorOrderNames[] = {
   "RBWG", "GRWB", "GBWR", "BRWG", "BGWR"
 };
 
-// LED state
+// State
 uint8_t componentsPerPixel = 3;                       // 3 for RGB, 4 for RGBW
 bool connected = false;                               // Whether serial is connected
-uint8_t checksumState = 0;                             // Data used to calculate checksum
+uint8_t checksumState = 0;                            // Data used to calculate checksum
 uint8_t cmd = 0;                                      // Identified command
 bool frameReady = false;                              // Whether a new frame is ready to display
 bool isRGBW = false;                                  // Whether we are using 4-channel LEDs
 uint16_t ledsPerChannel = MAX_RGBW_LEDS_PER_CHANNEL;  // Number of LEDs per channel
 uint16_t len = 0;                                     // Length of payload
+uint8_t chkL = 0;
+
+uint8_t currentColorOrder = 2;                        // Currently configured color order (GRB by default)
+uint8_t currentSpeed = WS2811_800kHz;                 // Currently configured speed (WS2811_800kHz by default)
 
 enum class ParseState : uint8_t {                     // Serial parser state machine
   WAIT_SOF,
@@ -113,7 +134,8 @@ enum class ParseState : uint8_t {                     // Serial parser state mac
   READ_LEN1,
   READ_LEN2,
   READ_DATA,
-  READ_CHK
+  READ_CHK,
+  READ_CHK2
 };
 
 ParseState state = ParseState::WAIT_SOF;              // Current state
@@ -167,12 +189,12 @@ void configure(
 ) {
 
   if (!isValidColorOrder(order)) {
-    sendError("INVALID_COLOR_ORDER", "COLOR_ORDER_NOT_SUPPORTED");
+    sendError(ERR_INVALID_COLOR_ORDER, "COLOR_ORDER_NOT_SUPPORTED");
     return;
   }
 
   if (!isValidSpeed(speed)) {
-      sendError("INVALID_SPEED", "PROTOCOL_SPEED_NOT_SUPPORTED");
+      sendError(ERR_INVALID_SPEED, "PROTOCOL_SPEED_NOT_SUPPORTED");
       return;
   }
 
@@ -180,7 +202,7 @@ void configure(
   uint16_t maxLeds = is4 ? MAX_RGBW_LEDS_PER_CHANNEL : MAX_RGB_LEDS_PER_CHANNEL;
     
   if (ledCount == 0 || ledCount > maxLeds) {
-    sendError("INVALID_LED_COUNT", "LEDS_PER_CHANNEL_OUT_OF_RANGE");
+    sendError(ERR_INVALID_LED_COUNT, "LEDS_PER_CHANNEL_OUT_OF_RANGE");
     return;
   }
 
@@ -188,6 +210,8 @@ void configure(
   createOctoWS2811Instance(ledCount, colorOrderMap[order] | speed);
 
   // Update global state
+  currentColorOrder  = order;
+  currentSpeed       = speed;
   ledsPerChannel = ledCount;
   isRGBW = (colorOrderMap[order] >= WS2811_RGBW);
   componentsPerPixel = isRGBW ? 4 : 3;
@@ -195,28 +219,6 @@ void configure(
   // Initialize OctoWS2811 object with the requested configuration and tell loop() to update
   leds->begin();
   frameReady = true; 
-
-}
-
-void sendConfigurationOnSerial(uint8_t order, uint8_t speed, uint16_t ledCount) {
-
-  Serial.print("CONFIG: ");
-
-  Serial.print("COLOR_ORDER=");
-  Serial.print(colorOrderNames[order]);
-
-  Serial.print(" SPEED=");
-  switch (speed) {
-    case WS2811_800kHz: Serial.print("800kHz"); break;
-    case WS2811_400kHz: Serial.print("400kHz"); break;
-    case WS2813_800kHz: Serial.print("800kHz_WS2813"); break;
-    default:            Serial.print("UNKNOWN"); break;
-  }
-
-  Serial.print(" LEDS_PER_CHANNEL=");
-  Serial.print(ledCount);
-
-  Serial.println();
 
 }
 
@@ -238,10 +240,6 @@ void loop() {
     if (!connected) {
       connected = true;
       configure();
-      // Serial.print("Connected to ");
-      // Serial.print(LIB_NAME);
-      // Serial.print(" v");
-      // Serial.println(LIB_VERSION);
       handleGetInfoCommand();
     } 
   } else {
@@ -304,7 +302,7 @@ void readSerialByte(uint8_t b) {
       checksumState = b;
 
       // For zero-payload commands, we jump ahead to READ_CHK.
-      if (cmd == CMD_UPDATE || cmd == CMD_GET_INFO) {
+      if (cmd == CMD_UPDATE || cmd == CMD_GET_INFO || cmd == CMD_GET_CONFIG) {
         len = 0;
         state = ParseState::READ_CHK;
       } else {
@@ -327,7 +325,7 @@ void readSerialByte(uint8_t b) {
       if (len > MAX_PAYLOAD) {
         state = ParseState::WAIT_SOF;
         checksumState = 0;
-        sendError("PAYLOAD_TOO_LARGE", "MAX_PAYLOAD_EXCEEDED");
+        sendError(ERR_PAYLOAD_TOO_LARGE, "MAX_PAYLOAD_EXCEEDED");
       } else {
         payloadIndex = 0;
         state = ParseState::READ_DATA;
@@ -343,13 +341,31 @@ void readSerialByte(uint8_t b) {
       
     // Verify checksum
     case ParseState::READ_CHK:
-      if (checksumState % CHECKSUM_MODULO == b) {
+      // if (checksumState % CHECKSUM_MODULO == b) {
+      //   processCommand();
+      // } else {
+      //   checksumState = 0;
+      //   sendError(ERR_CHECKSUM_MISMATCH, "CHECKSUM_VERIFICATION_FAILED");
+      // }
+      // state = ParseState::WAIT_SOF;
+      // break;
+      chkL = b;              // stocker le premier octet, vérifier au prochain
+      state = ParseState::READ_CHK2;
+      break;
+
+    case ParseState::READ_CHK2: {
+      uint16_t received = chkL | (b << 8);
+      uint16_t expected = checksumState % CHECKSUM_MODULO;  // MSB = 0x00 pour l'instant
+
+      if (received == expected) {
         processCommand();
       } else {
-        sendError("CHECKSUM_MISMATCH", "CHECKSUM_VERIFICATION_FAILED");
+        checksumState = 0;
+        sendError(ERR_CHECKSUM_MISMATCH, "CHECKSUM_VERIFICATION_FAILED");
       }
       state = ParseState::WAIT_SOF;
       break;
+    }
 
   }
   
@@ -360,13 +376,13 @@ void processCommand() {
     switch (cmd) {
       
       case CMD_GET_INFO:      handleGetInfoCommand();      break;
-
       case CMD_CONFIGURE:     handleConfigureCommand();    break;
+      case CMD_GET_CONFIG:    handleGetConfigCommand();    break;
       case CMD_ASSIGN_COLORS: handleAssignColorsCommand(); break;
       case CMD_FILL_COLOR:    handleFillColorCommand();    break;
       case CMD_UPDATE:        handleUpdateCommand();       break;
       default:
-        sendError("INVALID_COMMAND", "COMMAND_NOT_SUPPORTED");
+        sendError(ERR_UNKNOWN_COMMAND, "COMMAND_NOT_SUPPORTED");
         break;
     }
 
@@ -392,21 +408,41 @@ void handleGetInfoCommand() {
 
 }
 
+void handleGetConfigCommand() {
 
-void sendError(const char* code, const char* message) {
-  Serial.print("ERROR: CODE=");
-  Serial.print(code);
+  Serial.print("CONFIG: ");
+
+  Serial.print("COLOR_ORDER=");
+  Serial.print(colorOrderNames[currentColorOrder]);
+
+  Serial.print(" SPEED=");
+  switch (currentSpeed) {
+    case WS2811_800kHz: Serial.print("800kHz"); break;
+    case WS2811_400kHz: Serial.print("400kHz"); break;
+    case WS2813_800kHz: Serial.print("800kHz_WS2813"); break;
+    default:            Serial.print("UNKNOWN"); break;
+  }
+
+  Serial.print(" LEDS_PER_CHANNEL=");
+  Serial.print(ledsPerChannel);
+
+  Serial.println();
+
+}
+
+void sendError(uint8_t errCode, const char* message) {
+  Serial.print("ERROR: CODE=0x");
+  Serial.print(errCode, HEX);
   Serial.print(" MESSAGE=");
   Serial.println(message);
 }
-
 
 void handleConfigureCommand() {
 
   // We leave for the possibility of a larger length to allow future extensions in the configuration
   // options.
   if (len < 4) {
-    sendError("INVALID_CONFIGURATION", "PAYLOAD_TOO_SHORT");
+    sendError(ERR_PAYLOAD_TOO_SHORT, "PAYLOAD_TOO_SHORT");
     return;
   }
   
@@ -431,20 +467,20 @@ void handleConfigureCommand() {
   }
   
   if (!validColor) {
-    sendError("INVALID_COLOR_ORDER", "COLOR_ORDER_NOT_SUPPORTED");
+    sendError(ERR_INVALID_COLOR_ORDER, "COLOR_ORDER_NOT_SUPPORTED");
   }
 
   if (!validSpeed) {
-    sendError("INVALID_SPEED", "PROTOCOL_SPEED_NOT_SUPPORTED");
+    sendError(ERR_INVALID_SPEED, "PROTOCOL_SPEED_NOT_SUPPORTED");
   }
 
   if (!validLedCount) {
-    sendError("INVALID_LED_COUNT", "LEDS_PER_CHANNEL_OUT_OF_RANGE");
+    sendError(ERR_INVALID_LED_COUNT, "LEDS_PER_CHANNEL_OUT_OF_RANGE");
   }
   
   if (validColor && validSpeed && validLedCount) {
     configure(colorOrder, speed, count);
-    sendConfigurationOnSerial(colorOrder, speed, count);
+    handleGetConfigCommand();
   }
 
 }
@@ -452,20 +488,20 @@ void handleConfigureCommand() {
 void handleAssignColorsCommand() {
 
   if (!leds) {
-    sendError("SYSTEM_NOT_INITIALIZED", "LED_SYSTEM_NOT_READY");
+    sendError(ERR_SYSTEM_NOT_INITIALIZED, "LED_SYSTEM_NOT_READY");
     return;
   }
 
   // Check payload format (RGB or RGBW)
   if ((len - 1) % componentsPerPixel != 0) {
-    sendError("INVALID_PAYLOAD", "COLOR_COMPONENT_MISMATCH");
+    sendError(ERR_COLOR_COMPONENT_MISMATCH, "COLOR_COMPONENT_MISMATCH");
     return;
   }
   
   // First byte of payload is channel
   uint8_t ch = payload[0];
   if (ch >= CHANNEL_COUNT) {
-    sendError("INVALID_CHANNEL", "CHANNEL_INDEX_OUT_OF_RANGE");
+    sendError(ERR_INVALID_CHANNEL, "CHANNEL_INDEX_OUT_OF_RANGE");
     return;
   }
   
@@ -502,12 +538,12 @@ void handleAssignColorsCommand() {
 void handleFillColorCommand() {
 
   if (!leds) {
-    sendError("SYSTEM_NOT_INITIALIZED", "LED_SYSTEM_NOT_READY");
+    sendError(ERR_SYSTEM_NOT_INITIALIZED, "LED_SYSTEM_NOT_READY");
     return;
   }
   
   if (len < (isRGBW ? 5 : 4)) {
-    sendError("INVALID_PAYLOAD", "FILL_COLOR_PAYLOAD_TOO_SHORT");
+    sendError(ERR_PAYLOAD_TOO_SHORT, "FILL_COLOR_PAYLOAD_TOO_SHORT");
     return;
   }
   
@@ -515,7 +551,7 @@ void handleFillColorCommand() {
   uint8_t ch = payload[0];
 
   if (!isValidChannel(ch)) {
-    sendError("INVALID_CHANNEL", "CHANNEL_INDEX_OUT_OF_RANGE");
+    sendError(ERR_INVALID_CHANNEL, "CHANNEL_INDEX_OUT_OF_RANGE");
     return;
   }
 
@@ -553,7 +589,7 @@ void handleFillColorCommand() {
 void handleUpdateCommand() {
   
   if (!leds) {
-    sendError("SYSTEM_NOT_INITIALIZED", "LED_SYSTEM_NOT_READY");
+    sendError(ERR_SYSTEM_NOT_INITIALIZED, "LED_SYSTEM_NOT_READY");
     return;
   }
 
@@ -578,4 +614,5 @@ void resetParser() {
   payloadIndex = 0;
   len = 0;
   checksumState = 0;
+  chkL = 0;
 }
