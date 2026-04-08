@@ -91,7 +91,7 @@ soldering:
 * [OctoWS2811 Adapter](https://www.digikey.ca/short/rcqpt3h0) for Teensy 4.x
 * [Double Insulated Header Pins](https://www.digikey.ca/short/84fpr8q7)
 * [14 Pins Socket](https://www.digikey.ca/short/hmf83qpt), 2.54mm Spacing
-* Any Micro-USB B cable
+* Any Micro-B USB to USB Type B cable
 * Any RJ-45 Ethernet Cable (cut in two and expose the 4 internal wire pairs)
 
 The PJRC team has put together a [page](https://www.pjrc.com/store/octo28_adaptor.html) with 
