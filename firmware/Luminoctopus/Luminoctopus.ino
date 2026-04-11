@@ -28,7 +28,7 @@
 
 // Library name and version
 constexpr const char* LIB_NAME                  = "Luminoctopus";
-constexpr const char* LIB_VERSION               = "1.0.0-alpha.9";
+constexpr const char* LIB_VERSION               = "1.0.0-alpha.10";
 
 // Protocol version
 constexpr uint8_t PROTOCOL_VERSION              = 1;
