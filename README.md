@@ -97,9 +97,9 @@ soldering:
 The PJRC team has put together a [page](https://www.pjrc.com/store/octo28_adaptor.html) with 
 detailed assembly and wiring information.
 
-You can also 3D-print this nice case with removable cover:
-
-* coming soon...
+You can also 3D-print this [nice case](https://github.com/djipco/luminoctopus/tree/main/enclosure)
+with removable cover (available as a single Autodesk Fusion file or two `.stl` files (thanks to Alexandre 
+Labrie!)
 
 ## Protocol
 
